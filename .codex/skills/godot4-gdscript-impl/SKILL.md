@@ -10,6 +10,7 @@ description: Implement Godot 4 features in typed GDScript 2.0 with scenes, Resou
 - Prefer composition and signals over tight coupling.
 - Add minimal debug tooling: deterministic RNG seed, toggleable debug overlay, log key events.
 
+
 # Project architecture (baseline)
 ## Scenes
 - res://scenes/Main.tscn
@@ -45,3 +46,17 @@ description: Implement Godot 4 features in typed GDScript 2.0 with scenes, Resou
 1) Read PLANS.md + docs/SCENE_TREE.md + docs/DATA_SCHEMA.md
 2) Implement smallest verifiable increment
 3) Update docs + provide verification checklist
+# Output contract (important)
+For any feature task, respond in two phases:
+PHASE 1 — Editor Checklist:
+- Scenes/nodes to create/rename
+- Node paths and required components
+- Inspector properties to set (layers, groups, collision, anchors, camera, fonts, textures)
+- Resource (.tres) to create and where
+Wait for user confirmation.
+
+PHASE 2 — Code:
+- Provide complete, directly runnable GDScript files
+- List modified files + exact paths
+- Provide Godot Editor verification checklist
+
