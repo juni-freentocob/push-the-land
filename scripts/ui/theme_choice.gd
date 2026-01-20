@@ -1,11 +1,11 @@
+class_name ThemeChoice
 extends Control
 
+signal theme_chosen(theme_id: StringName)
 
-# Called when the node enters the scene tree for the first time.
 func _ready() -> void:
-	pass # Replace with function body.
+	print("[ThemeChoice] Ready (visible=%s)" % self.visible)
 
-
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta: float) -> void:
-	pass
+func debug_choose(theme_id: StringName) -> void:
+	print("[ThemeChoice] Theme chosen:", theme_id)
+	theme_chosen.emit(theme_id)

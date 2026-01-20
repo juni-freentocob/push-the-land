@@ -1,11 +1,11 @@
+class_name TrashZone
 extends Control
 
+signal delete_requested(card_view: Node)
 
-# Called when the node enters the scene tree for the first time.
 func _ready() -> void:
-	pass # Replace with function body.
+	print("[TrashZone] Ready")
 
-
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta: float) -> void:
-	pass
+func debug_delete(card_view: Node) -> void:
+	print("[TrashZone] Delete requested:", card_view)
+	delete_requested.emit(card_view)
