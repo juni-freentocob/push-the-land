@@ -1,0 +1,34 @@
+[gd_scene load_steps=12 format=3 uid="uid://birnebio532xh"]
+
+[ext_resource type="Script" uid="uid://b0qbx467rr8xn" path="res://scripts/main.gd" id="1_kn2el"]
+[ext_resource type="PackedScene" uid="uid://c61j7c6vejtpg" path="res://scenes/Board.tscn" id="2_scd1o"]
+[ext_resource type="PackedScene" uid="uid://ch4diixeakcwp" path="res://scenes/ui/HeroPanel.tscn" id="3_6i7k1"]
+[ext_resource type="Script" uid="uid://stmfjg2ppeoq" path="res://scripts/board/board.gd" id="3_nkrwe"]
+[ext_resource type="PackedScene" uid="uid://dl857a7s00ie8" path="res://scenes/ui/TrashZone.tscn" id="4_0ppij"]
+[ext_resource type="Script" uid="uid://bnuv45n6tkove" path="res://scripts/ui/hero_panel.gd" id="5_qqghe"]
+[ext_resource type="PackedScene" uid="uid://cwn8eaujvffyq" path="res://scenes/ui/BossPreview.tscn" id="5_r1xti"]
+[ext_resource type="PackedScene" uid="uid://b4srhct1iruih" path="res://scenes/ui/ThemeChoice.tscn" id="6_46o2g"]
+[ext_resource type="Script" uid="uid://cacutuvc847uk" path="res://scripts/ui/trash_zone.gd" id="7_n330b"]
+[ext_resource type="Script" uid="uid://dal110wbtsem" path="res://scripts/ui/boss_preview.gd" id="9_urx7g"]
+[ext_resource type="Script" uid="uid://bcwrlgffogacc" path="res://scripts/ui/theme_choice.gd" id="11_g72px"]
+
+[node name="Main" type="Node"]
+script = ExtResource("1_kn2el")
+
+[node name="Board" parent="." instance=ExtResource("2_scd1o")]
+script = ExtResource("3_nkrwe")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="HeroPanel" parent="UI" instance=ExtResource("3_6i7k1")]
+script = ExtResource("5_qqghe")
+
+[node name="TrashZone" parent="UI" instance=ExtResource("4_0ppij")]
+script = ExtResource("7_n330b")
+
+[node name="BossPreview" parent="UI" instance=ExtResource("5_r1xti")]
+script = ExtResource("9_urx7g")
+
+[node name="ThemeChoice" parent="UI" instance=ExtResource("6_46o2g")]
+visible = false
+script = ExtResource("11_g72px")
