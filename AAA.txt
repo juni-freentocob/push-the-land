@@ -1,1 +1,5 @@
 cmd /c "(for /r %i in (*.gd) do @echo. & @echo [FILE: %~nxi] & @type "%i") > all_code.txt"
+
+git add -A
+git commit -m "T3"
+git push
