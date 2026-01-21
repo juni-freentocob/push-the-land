@@ -144,6 +144,8 @@
 
 ## 5. Decisions log
 - 2026-01-20: Default branch is master; remote uses SSH for GitHub push stability.
+- 2026-01-20: Use manual drag (CardView _gui_input/_process) + CardLayer hit dispatch; avoid Control drag/drop due to CanvasLayer/mouse filter/hit issues blocking drop targets.
+- 2026-01-20: Drop hit-testing uses visible ColorRect areas (HeroPanel/TrashZone) to avoid root Control size mismatches; dispatch priority is TrashZone > HeroPanel > Board via accept_drop/can_accept_drop.
 
 ## 6. Debug/Test strategy
 - Deterministic RNG seed toggle

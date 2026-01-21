@@ -4,6 +4,8 @@
 - Prefer Resource-driven data definitions (CardDef/TerrainDef/SpiritDef/ThemeDef).
 - Every change must include verification steps runnable in editor.
 - Keep architecture consistent: Board + UI panels separated; drag/drop is signal-driven.
+- Drag/drop uses manual drag + CardLayer hit dispatch; do not use Control drag/drop APIs unless explicitly requested.
+- Drag/drop flow (stable): CardView uses _gui_input/_process for real movement; CardLayer dispatches on release by hit-testing UI ColorRect areas; targets implement accept_drop(card_view) and optional can_accept_drop(card_view).
 
 ## Collaboration protocol (Godot Editor vs Code)
 - Treat Godot Editor actions (creating nodes/scenes, setting layers, assigning sprites/fonts/materials, camera setup, inspector properties) as USER-EXECUTED steps.

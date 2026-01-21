@@ -5,12 +5,17 @@ signal equip_requested(card_view: Node)
 signal combat_requested(enemy_card_view: Node)
 
 func _ready() -> void:
-	print("[HeroPanel] Ready")
+	pass
+
+func accept_drop(card_view: CardView) -> void:
+	print("[HeroPanel] Drop accepted (layer):", card_view)
+	equip_requested.emit(card_view)
+
+func can_accept_drop(_card_view: CardView) -> bool:
+	return true
 
 func debug_equip(card_view: Node) -> void:
-	print("[HeroPanel] Equip requested:", card_view)
 	equip_requested.emit(card_view)
 
 func debug_combat(enemy_card_view: Node) -> void:
-	print("[HeroPanel] Combat requested:", enemy_card_view)
 	combat_requested.emit(enemy_card_view)

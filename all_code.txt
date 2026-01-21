@@ -1,0 +1,133 @@
+ 
+[FILE: main.gd] 
+extends Node
+
+@onready var board: Board = $Board
+@onready var hero_panel: HeroPanel = $UI/HeroPanel
+@onready var trash_zone: TrashZone = $UI/TrashZone
+@onready var boss_preview: BossPreview = $UI/BossPreview
+@onready var theme_choice: ThemeChoice = $UI/ThemeChoice
+
+func _ready() -> void:
+	print("[Main] Ready")
+	print("[Main] Board:", board)
+	print("[Main] HeroPanel:", hero_panel)
+	print("[Main] TrashZone:", trash_zone)
+	print("[Main] BossPreview:", boss_preview)
+	print("[Main] ThemeChoice:", theme_choice)
+ 
+[FILE: board.gd] 
+class_name Board
+extends Control
+
+signal board_cell_dropped(card_view: Node, cell: Vector2i)
+
+func _ready() -> void:
+	print("[Board] Ready")
+
+func debug_drop(card_view: Node, cell: Vector2i) -> void:
+	print("[Board] Drop request:", card_view, "cell:", cell)
+	board_cell_dropped.emit(card_view, cell)
+ 
+[FILE: card_view.gd] 
+class_name CardView
+extends Control
+
+signal drag_started(card_view: Node)
+signal drag_ended(card_view: Node)
+
+const DRAG_KEY: StringName = &"card_view"
+
+func _ready() -> void:
+	print("[CardView] Ready")
+
+func _get_drag_data(_at_position: Vector2) -> Variant:
+	drag_started.emit(self)
+	var preview := ColorRect.new()
+	preview.color = Color(1, 1, 1, 0.4)
+	preview.size = size
+	set_drag_preview(preview)
+	return {DRAG_KEY: self}
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_DRAG_END:
+		drag_ended.emit(self)
+
+func debug_drag_start() -> void:
+	print("[CardView] Drag started")
+	drag_started.emit(self)
+
+func debug_drag_end() -> void:
+	print("[CardView] Drag ended")
+	drag_ended.emit(self)
+ 
+[FILE: boss_preview.gd] 
+class_name BossPreview
+extends Control
+
+func _ready() -> void:
+	print("[BossPreview] Ready")
+ 
+[FILE: hero_panel.gd] 
+class_name HeroPanel
+extends Control
+
+signal equip_requested(card_view: Node)
+signal combat_requested(enemy_card_view: Node)
+
+const DRAG_KEY: StringName = &"card_view"
+
+func _ready() -> void:
+	print("[HeroPanel] Ready")
+
+func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
+	return data is Dictionary and data.has(DRAG_KEY) and data[DRAG_KEY] is CardView
+
+func _drop_data(_at_position: Vector2, data: Variant) -> void:
+	var card_view: CardView = data[DRAG_KEY]
+	print("[HeroPanel] Drop accepted:", card_view)
+	equip_requested.emit(card_view)
+
+func debug_equip(card_view: Node) -> void:
+	print("[HeroPanel] Equip requested:", card_view)
+	equip_requested.emit(card_view)
+
+func debug_combat(enemy_card_view: Node) -> void:
+	print("[HeroPanel] Combat requested:", enemy_card_view)
+	combat_requested.emit(enemy_card_view)
+ 
+[FILE: theme_choice.gd] 
+class_name ThemeChoice
+extends Control
+
+signal theme_chosen(theme_id: StringName)
+
+func _ready() -> void:
+	print("[ThemeChoice] Ready (visible=%s)" % self.visible)
+
+func debug_choose(theme_id: StringName) -> void:
+	print("[ThemeChoice] Theme chosen:", theme_id)
+	theme_chosen.emit(theme_id)
+ 
+[FILE: trash_zone.gd] 
+class_name TrashZone
+extends Control
+
+signal delete_requested(card_view: Node)
+
+const DRAG_KEY: StringName = &"card_view"
+
+func _ready() -> void:
+	print("[TrashZone] Ready")
+
+func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
+	return data is Dictionary and data.has(DRAG_KEY) and data[DRAG_KEY] is CardView
+
+func _drop_data(_at_position: Vector2, data: Variant) -> void:
+	var card_view: CardView = data[DRAG_KEY]
+	print("[TrashZone] Drop accepted:", card_view)
+	delete_requested.emit(card_view)
+
+func debug_delete(card_view: Node) -> void:
+	print("[TrashZone] Delete requested:", card_view)
+	delete_requested.emit(card_view)

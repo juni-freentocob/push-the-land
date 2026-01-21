@@ -1,0 +1,1 @@
+cmd /c "(for /r %i in (*.gd) do @echo. & @echo [FILE: %~nxi] & @type "%i") > all_code.txt"
