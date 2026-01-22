@@ -1,6 +1,7 @@
-[gd_scene load_steps=14 format=3 uid="uid://birnebio532xh"]
+[gd_scene load_steps=15 format=3 uid="uid://birnebio532xh"]
 
 [ext_resource type="Script" uid="uid://b0qbx467rr8xn" path="res://scripts/main.gd" id="1_kn2el"]
+[ext_resource type="Resource" uid="uid://bfvp0dbve6sew" path="res://data/themes/swamp_theme.tres" id="2_mwfav"]
 [ext_resource type="PackedScene" uid="uid://c61j7c6vejtpg" path="res://scenes/Board.tscn" id="2_scd1o"]
 [ext_resource type="PackedScene" uid="uid://ch4diixeakcwp" path="res://scenes/ui/HeroPanel.tscn" id="3_6i7k1"]
 [ext_resource type="Script" uid="uid://stmfjg2ppeoq" path="res://scripts/board/board.gd" id="3_nkrwe"]
@@ -16,6 +17,7 @@
 
 [node name="Main" type="Node"]
 script = ExtResource("1_kn2el")
+theme = ExtResource("2_mwfav")
 
 [node name="Board" parent="." instance=ExtResource("2_scd1o")]
 z_index = -1
@@ -52,3 +54,26 @@ layout_mode = 1
 
 [node name="CardView2" parent="UI/CardLayer" instance=ExtResource("12_bjd11")]
 layout_mode = 1
+
+[node name="DebugHUD" type="Control" parent="UI"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="SeedLabel" type="Label" parent="UI/DebugHUD"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="SpawnLabel" type="Label" parent="UI/DebugHUD"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="DebugBox" type="VBoxContainer" parent="UI/DebugHUD"]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 48.0
+offset_bottom = 48.0

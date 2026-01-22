@@ -17,7 +17,8 @@ func can_accept_drop(_card_view: CardView) -> bool:
 	return true
 
 func accept_drop(card_view: CardView) -> bool:
-	var cell := global_pos_to_cell(get_viewport().get_mouse_position())
+	var card_center := card_view.get_global_rect().position + (card_view.size * 0.5)
+	var cell := global_pos_to_cell(card_center)
 	if not _is_cell_in_bounds(cell):
 		print("[Board] Drop rejected (out of bounds):", cell)
 		return false
@@ -33,12 +34,14 @@ func accept_drop(card_view: CardView) -> bool:
 	return true
 
 func cell_to_global_pos(cell: Vector2i, card_size: Vector2) -> Vector2:
-	var cell_origin := global_position + Vector2(cell.x * cell_size, cell.y * cell_size)
+	var board_origin := get_global_rect().position
+	var cell_origin := board_origin + Vector2(cell.x * cell_size, cell.y * cell_size)
 	var cell_center := cell_origin + Vector2(cell_size * 0.5, cell_size * 0.5)
 	return cell_center - (card_size * 0.5)
 
 func global_pos_to_cell(global_pos: Vector2) -> Vector2i:
-	var local := global_pos - global_position
+	var board_origin := get_global_rect().position
+	var local := global_pos - board_origin
 	return Vector2i(floor(local.x / cell_size), floor(local.y / cell_size))
 
 func _is_cell_in_bounds(cell: Vector2i) -> bool:

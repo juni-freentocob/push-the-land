@@ -4,10 +4,7 @@
 
 [resource]
 script = ExtResource("1_cch3o")
-metadata/_custom_type_script = "uid://bdjmbt4cawsjg"
 id = &"spirit_plus_mud"
-inputs = PackedStringArray("swamp_spirit", "swamp_mud")
 output = &"swamp_enemy"
-consume_inputs = true
-output_count = 1
 notes = "Debug rule for MVP."
+metadata/_custom_type_script = "uid://bdjmbt4cawsjg"

@@ -6,6 +6,7 @@
 - Keep architecture consistent: Board + UI panels separated; drag/drop is signal-driven.
 - Drag/drop uses manual drag + CardLayer hit dispatch; do not use Control drag/drop APIs unless explicitly requested.
 - Drag/drop flow (stable): CardView uses _gui_input/_process for real movement; CardLayer dispatches on release by hit-testing UI ColorRect areas; targets implement accept_drop(card_view) and optional can_accept_drop(card_view).
+- CardView interactive rect must match its visual size (e.g., 64x64); avoid oversized root rects to prevent mis-pick.
 
 ## Collaboration protocol (Godot Editor vs Code)
 - Treat Godot Editor actions (creating nodes/scenes, setting layers, assigning sprites/fonts/materials, camera setup, inspector properties) as USER-EXECUTED steps.

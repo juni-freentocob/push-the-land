@@ -76,7 +76,7 @@
 **Risks**
 - Over-engineering early. Mitigation: keep M0 minimal and support M1 only.
 
-### M1 — Vertical Slice (Swamp theme) — complete 100 cards -> Boss -> Victory -> ThemeChoice (T3 DONE, T4 DONE)
+### M1 — Vertical Slice (Swamp theme) — complete 100 cards -> Boss -> Victory -> ThemeChoice (T3 DONE, T4 DONE, T5 DONE)
 **Scope**
 - Implement full loop for a single theme (Swamp) with minimal but playable rules.
 **Deliverables**
@@ -86,6 +86,12 @@
 - Boss preview (static data)
 - Boss spawn after 100, minimal combat, win condition
 - ThemeChoice UI (3 boxes) placeholder navigation
+**T5 Completion**
+- Theme-driven spawn: Main reads ThemeDef.deck_weights, spawns 100 cards by weight
+- Deterministic RNG: fixed seed or system-time seed modes
+- DebugHUD: Seed, Theme, Spawned (overlap fixed)
+- Spawn layout: first board_size*board_size cards placed on grid; extras stacked
+- Stability fixes: DebugHUD null-safe; CardView interactive rect matches visual size
 **Acceptance**
 - Player can finish a run: place/merge/trash/equip; boss appears; defeat boss; reach ThemeChoice
 **Verification**
@@ -161,6 +167,7 @@
 - 2026-01-20: Placement snap is center-to-center (card center aligns to cell center).
 - 2026-01-20: GridVisual is debug-only visualization; future art can replace without changing logic.
 - 2026-01-20: T4 resources and .tres data landed; boss_id and swamp_enemy are placeholders for T7/T8.
+- 2026-01-20: RNG supports fixed seed or system-time seed for reproducible spawns (configured in Main export vars).
 
 ## 6. Debug/Test strategy
 - Deterministic RNG seed toggle

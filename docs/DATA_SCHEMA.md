@@ -75,10 +75,12 @@ Fields:
 - id: StringName
 - display_name: String
 - deck: Array[StringName] (list of CardDef ids; for MVP we can generate 100 from weights)
-- deck_weights: Dictionary[StringName, int] (recommended; easier than 100 entries)
+- deck_weights: Dictionary[StringName, int] (card_id -> weight)
 - boss_id: StringName (BossDef or EnemyDef id)
 - visuals: Dictionary (background, card_frame, tint) (optional early)
 - next_theme_pool: Array[StringName] (optional; controls what appears in 3 boxes)
+Notes:
+- RNG seed config lives in Main export vars (fixed or system-time)
 
 ## 8) Runtime instance (not a Resource)
 CardInstance:

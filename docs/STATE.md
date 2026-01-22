@@ -30,6 +30,7 @@ T4 (Resources + Swamp data)
 - Placement snap: center-to-center (card center to cell center)
 - GridVisual is debug-only; visuals can be replaced without changing logic
 - T4 resources and .tres data are in place; boss_id and swamp_enemy are placeholders
+- RNG is configurable via Main export vars (fixed seed or system time)
 
 ## Current Implementation Notes
 - Board placement uses occupancy map keyed by Vector2i cells

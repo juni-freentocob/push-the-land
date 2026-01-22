@@ -4,14 +4,7 @@
 
 [resource]
 script = ExtResource("1_5ovf0")
-metadata/_custom_type_script = "uid://bh4ielkgicvpi"
 id = &"swamp_spirit"
 display_name = "Swamp Spirit"
 kind = 1
-rarity = 0
-theme_tags = PackedStringArray("swamp")
-stackable = false
-equipment_slot = 0
-stats = {}
-terrain_part = &""
-spirit_tier = 0
+metadata/_custom_type_script = "uid://bh4ielkgicvpi"
