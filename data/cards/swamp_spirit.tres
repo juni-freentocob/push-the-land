@@ -7,4 +7,7 @@ script = ExtResource("1_5ovf0")
 id = &"swamp_spirit"
 display_name = "Swamp Spirit"
 kind = 1
+theme_tags = PackedStringArray("swamp")
+equipment_slot = 0
+spirit_tier = 0
 metadata/_custom_type_script = "uid://bh4ielkgicvpi"

@@ -7,4 +7,6 @@ script = ExtResource("1_03oyh")
 id = &"swamp_mud"
 display_name = "Swamp Mud"
 terrain_part = &"swamp"
+kind = 0
+theme_tags = PackedStringArray("swamp")
 metadata/_custom_type_script = "uid://bh4ielkgicvpi"

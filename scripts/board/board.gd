@@ -2,16 +2,26 @@ class_name Board
 extends Control
 
 signal board_cell_dropped(card_view: Node, cell: Vector2i)
+signal merge_happened(input_a: StringName, input_b: StringName, output: StringName, cell: Vector2i)
 
 @export var board_size: int = 9
 @export var cell_size: int = 64
+@export var hover_debug: bool = true
 
 @onready var occupancy_layer: Control = $OccupancyLayer
 
 var occupancy: Dictionary[Vector2i, CardView] = {}
+var merge_rules: Array[MergeRule] = []
+var _hover_def_id: StringName = &""
+var _hover_locked: bool = false
 
 func _ready() -> void:
 	pass
+
+func _process(_delta: float) -> void:
+	if hover_debug:
+		if not _hover_locked:
+			_update_hover_highlight()
 
 func can_accept_drop(_card_view: CardView) -> bool:
 	return true
@@ -24,6 +34,9 @@ func accept_drop(card_view: CardView) -> bool:
 		return false
 	var existing: CardView = occupancy.get(cell) as CardView
 	if existing != null and existing != card_view:
+		var rule := _find_merge_rule(card_view.def_id, existing.def_id)
+		if rule != null:
+			return _resolve_merge(existing, card_view, rule, cell)
 		print("[Board] Drop rejected (occupied):", cell)
 		return false
 	_remove_card_from_occupancy(card_view)
@@ -55,6 +68,88 @@ func _remove_card_from_occupancy(card_view: CardView) -> void:
 			break
 	if to_remove.x != -1:
 		occupancy.erase(to_remove)
+
+func set_merge_rules(rules: Array[MergeRule]) -> void:
+	merge_rules = []
+	for rule in rules:
+		if rule != null:
+			merge_rules.append(rule)
+
+func place_card_at_cell(card_view: CardView, cell: Vector2i) -> void:
+	occupancy[cell] = card_view
+	card_view.reparent(occupancy_layer)
+	card_view.global_position = cell_to_global_pos(cell, card_view.size)
+
+func highlight_mergeable(def_id: StringName, exclude: CardView = null) -> void:
+	for cell: Vector2i in occupancy.keys():
+		var other := occupancy[cell]
+		if other == null:
+			continue
+		if exclude != null and other == exclude:
+			other.set_highlighted(false)
+			continue
+		var can_merge := _find_merge_rule(def_id, other.def_id) != null
+		other.set_highlighted(can_merge)
+
+func clear_highlights() -> void:
+	for cell: Vector2i in occupancy.keys():
+		var other := occupancy[cell]
+		if other != null:
+			other.set_highlighted(false)
+	_hover_def_id = &""
+
+func set_hover_source(def_id: StringName, exclude: CardView = null) -> void:
+	_hover_locked = true
+	_hover_def_id = def_id
+	highlight_mergeable(def_id, exclude)
+
+func clear_hover_source() -> void:
+	_hover_locked = false
+	clear_highlights()
+
+func _find_merge_rule(id_a: StringName, id_b: StringName) -> MergeRule:
+	for rule in merge_rules:
+		if rule == null:
+			continue
+		if _rule_matches(rule, id_a, id_b):
+			return rule
+	return null
+
+func _rule_matches(rule: MergeRule, id_a: StringName, id_b: StringName) -> bool:
+	if rule.inputs.size() != 2:
+		return false
+	var a := String(id_a)
+	var b := String(id_b)
+	if a == "" or b == "":
+		return false
+	if a == b:
+		return rule.inputs[0] == a and rule.inputs[1] == a
+	return rule.inputs.has(a) and rule.inputs.has(b)
+
+func _resolve_merge(existing: CardView, incoming: CardView, rule: MergeRule, cell: Vector2i) -> bool:
+	_remove_card_from_occupancy(existing)
+	_remove_card_from_occupancy(incoming)
+	existing.queue_free()
+	incoming.queue_free()
+	merge_happened.emit(existing.def_id, incoming.def_id, rule.output, cell)
+	return true
+
+func _update_hover_highlight() -> void:
+	var mouse_pos := get_viewport().get_mouse_position()
+	if not get_global_rect().has_point(mouse_pos):
+		if _hover_def_id != &"":
+			clear_highlights()
+		return
+	var cell := global_pos_to_cell(mouse_pos)
+	var hovered: CardView = occupancy.get(cell) as CardView
+	var new_def_id := hovered.def_id if hovered != null else &""
+	if new_def_id == _hover_def_id:
+		return
+	_hover_def_id = new_def_id
+	if _hover_def_id == &"":
+		clear_highlights()
+	else:
+		highlight_mergeable(_hover_def_id)
 
 func debug_drop(card_view: Node, cell: Vector2i) -> void:
 	print("[Board] Drop request:", card_view, "cell:", cell)

@@ -34,6 +34,7 @@ Fields:
 - notes: String
 Notes:
 - inputs are order-insensitive
+- swamp_enemy is MVP merge output placeholder (T7/T8 will map to real EnemyDef/combat)
 
 ## 3) TerrainDef (res://data/terrains/TerrainDef.gd)
 Defines a complete terrain type.

@@ -24,6 +24,12 @@ T4 (Resources + Swamp data)
 - swamp_rules.tres: 1 MVP rule (spirit + mud -> swamp_enemy)
 - MissingResource/class_name issues resolved (Inspector editable)
 
+T6 (Merge + Hover + Overflow)
+- MergeRule data-driven; order-insensitive match
+- Merge generates swamp_enemy MVP output
+- Hover highlight stable during drag; dragged card not highlighted
+- OverflowArea holds cards beyond 9x9, avoids UI blocking
+
 ## Key Decisions
 - Manual drag/drop only (no Control drag/drop APIs)
 - Drop priority: TrashZone > HeroPanel > Board
