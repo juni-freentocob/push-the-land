@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="CardDef" load_steps=2 format=3 uid="uid://bfe36fbqf3t5l"]
+
+[ext_resource type="Script" uid="uid://bh4ielkgicvpi" path="res://scripts/data/card_def.gd" id="1_juhps"]
+
+[resource]
+script = ExtResource("1_juhps")
+metadata/_custom_type_script = "uid://bh4ielkgicvpi"
+id = &"wood_spear"
+display_name = "Wood Spear"
+kind = 2
+rarity = 0
+theme_tags = PackedStringArray("swamp")
+stackable = false
+equipment_slot = 1
+stats = {
+"atk_bonus": 1
+}
+terrain_part = &""
+spirit_tier = 0

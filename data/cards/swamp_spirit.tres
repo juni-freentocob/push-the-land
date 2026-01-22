@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="CardDef" load_steps=2 format=3 uid="uid://c1vsy3ac2n2eu"]
+
+[ext_resource type="Script" uid="uid://bh4ielkgicvpi" path="res://scripts/data/card_def.gd" id="1_5ovf0"]
+
+[resource]
+script = ExtResource("1_5ovf0")
+metadata/_custom_type_script = "uid://bh4ielkgicvpi"
+id = &"swamp_spirit"
+display_name = "Swamp Spirit"
+kind = 1
+rarity = 0
+theme_tags = PackedStringArray("swamp")
+stackable = false
+equipment_slot = 0
+stats = {}
+terrain_part = &""
+spirit_tier = 0

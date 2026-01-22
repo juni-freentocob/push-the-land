@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MergeRule" load_steps=2 format=3 uid="uid://nin4e1vfl2k8"]
+
+[ext_resource type="Script" uid="uid://bdjmbt4cawsjg" path="res://scripts/data/merge_rule.gd" id="1_cch3o"]
+
+[resource]
+script = ExtResource("1_cch3o")
+metadata/_custom_type_script = "uid://bdjmbt4cawsjg"
+id = &"spirit_plus_mud"
+inputs = PackedStringArray("swamp_spirit", "swamp_mud")
+output = &"swamp_enemy"
+consume_inputs = true
+output_count = 1
+notes = "Debug rule for MVP."

@@ -35,6 +35,11 @@ Responsibilities:
 - Maintain occupancy map: Dictionary[Vector2i, CardView]
 - Provide query for highlight: get_mergeable_partners(card_def_id) -> Array[CardView]
 
+## CardLayer (in Main.tscn UI)
+Responsibilities:
+- Receives drag release and dispatches to TrashZone > HeroPanel > Board
+- Hit-tests visible ColorRect areas for UI drops
+
 ## CardView.tscn
 CardView (Control)
 - TextureRect / Label for name

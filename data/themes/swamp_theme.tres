@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ThemeDef" load_steps=2 format=3 uid="uid://bfvp0dbve6sew"]
+
+[ext_resource type="Script" uid="uid://dqwmvf0u14jkh" path="res://scripts/data/theme_def.gd" id="1_gmsq5"]
+
+[resource]
+script = ExtResource("1_gmsq5")
+metadata/_custom_type_script = "uid://dqwmvf0u14jkh"
+id = &"swamp"
+display_name = "Swamp"
+deck_weights = {
+"swamp_mud": 30,
+"swamp_spirit": 50,
+"wood_spear": 20
+}
+boss_id = &"swamp_boss"
+visuals = {}
+next_theme_pool = PackedStringArray()

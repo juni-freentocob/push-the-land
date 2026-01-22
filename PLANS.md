@@ -76,13 +76,13 @@
 **Risks**
 - Over-engineering early. Mitigation: keep M0 minimal and support M1 only.
 
-### M1 — Vertical Slice (Swamp theme) — complete 100 cards -> Boss -> Victory -> ThemeChoice
+### M1 — Vertical Slice (Swamp theme) — complete 100 cards -> Boss -> Victory -> ThemeChoice (T3 DONE, T4 DONE)
 **Scope**
 - Implement full loop for a single theme (Swamp) with minimal but playable rules.
 **Deliverables**
 - Card spawning system (100 cards random order from theme deck)
-- Drag & drop: board place, hero equip, trash delete
-- Merge rules (>= 3 recipes), hover highlight mergeable partners
+- Drag & drop: board place, hero equip, trash delete (T3 DONE)
+- Merge rules (>= 3 recipes), hover highlight mergeable partners (T4 DONE: data schema + 1 MVP rule)
 - Boss preview (static data)
 - Boss spawn after 100, minimal combat, win condition
 - ThemeChoice UI (3 boxes) placeholder navigation
@@ -92,6 +92,18 @@
 - Start run with deterministic seed; confirm boss spawns exactly after 100th card
 - Confirm merge highlight matches rule set
 - Confirm trash gives XP and updates hero UI
+**T3 Completion**
+- Logical grid (board_size/cell_size)
+- Placement + occupancy (snap, same-cell reject, out-of-bounds reject)
+- Repositioning placed cards
+- Drag flow: manual drag + CardLayer dispatch
+- GridVisual debug rendering enabled
+**T4 Completion**
+- Resource scripts: CardDef / ThemeDef / MergeRule (typed GDScript, class_name registered)
+- Swamp data: swamp_spirit (SPIRIT), swamp_mud (TERRAIN_PART), wood_spear (EQUIPMENT with atk_bonus)
+- swamp_theme.tres: deck_weights set, boss_id placeholder
+- swamp_rules.tres: 1 MVP rule (spirit + mud -> swamp_enemy)
+- MissingResource/class_name registration issue resolved (Inspector editable)
 **Risks**
 - Drag UX is fiddly. Mitigation: snapping, clear drop zones, hover preview.
 
@@ -146,6 +158,9 @@
 - 2026-01-20: Default branch is master; remote uses SSH for GitHub push stability.
 - 2026-01-20: Use manual drag (CardView _gui_input/_process) + CardLayer hit dispatch; avoid Control drag/drop due to CanvasLayer/mouse filter/hit issues blocking drop targets.
 - 2026-01-20: Drop hit-testing uses visible ColorRect areas (HeroPanel/TrashZone) to avoid root Control size mismatches; dispatch priority is TrashZone > HeroPanel > Board via accept_drop/can_accept_drop.
+- 2026-01-20: Placement snap is center-to-center (card center aligns to cell center).
+- 2026-01-20: GridVisual is debug-only visualization; future art can replace without changing logic.
+- 2026-01-20: T4 resources and .tres data landed; boss_id and swamp_enemy are placeholders for T7/T8.
 
 ## 6. Debug/Test strategy
 - Deterministic RNG seed toggle

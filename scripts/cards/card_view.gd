@@ -23,13 +23,27 @@ func _gui_input(event: InputEvent) -> void:
 		elif _dragging:
 			_dragging = false
 			drag_ended.emit(self)
-			var layer := get_parent()
 			var accepted := false
-			if layer != null and layer.has_method("handle_drop_from_card"):
-				accepted = layer.handle_drop_from_card(self)
+			var card_layer := _find_card_layer()
+			if card_layer != null:
+				accepted = card_layer.handle_drop_from_card(self)
 			if not accepted:
 				global_position = _start_pos
 
 func _process(_delta: float) -> void:
 	if _dragging:
 		global_position = get_global_mouse_position() - _drag_offset
+
+func _find_card_layer() -> Node:
+	var node := get_parent()
+	while node != null:
+		if node.has_method("handle_drop_from_card"):
+			return node
+		node = node.get_parent()
+	var root := get_tree().root
+	if root == null:
+		return null
+	var found := root.find_child("CardLayer", true, false)
+	if found != null and found.has_method("handle_drop_from_card"):
+		return found
+	return null

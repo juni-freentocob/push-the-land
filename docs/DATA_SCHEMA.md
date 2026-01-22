@@ -14,6 +14,14 @@ Fields (suggested):
 - stats: Dictionary or dedicated Resource (e.g., atk_bonus, def_bonus, hp_bonus)
 - terrain_part: TerrainPartRef? (links to terrain assembly; only for TERRAIN_PART)
 - spirit_tier: enum { NORMAL, ELITE } (only for SPIRIT)
+CardKind values:
+- TERRAIN_PART
+- SPIRIT
+- EQUIPMENT
+- JUNK
+- GENERATED_ENEMY
+Notes:
+- atk_bonus lives in stats for EQUIPMENT (e.g., {"atk_bonus": 1})
 
 ## 2) MergeRule (res://data/merge/MergeRule.gd)
 A single recipe rule.
@@ -24,6 +32,8 @@ Fields:
 - consume_inputs: bool = true
 - output_count: int = 1
 - notes: String
+Notes:
+- inputs are order-insensitive
 
 ## 3) TerrainDef (res://data/terrains/TerrainDef.gd)
 Defines a complete terrain type.
@@ -66,8 +76,8 @@ Fields:
 - display_name: String
 - deck: Array[StringName] (list of CardDef ids; for MVP we can generate 100 from weights)
 - deck_weights: Dictionary[StringName, int] (recommended; easier than 100 entries)
+- boss_id: StringName (BossDef or EnemyDef id)
 - visuals: Dictionary (background, card_frame, tint) (optional early)
-- boss: StringName (BossDef or EnemyDef id)
 - next_theme_pool: Array[StringName] (optional; controls what appears in 3 boxes)
 
 ## 8) Runtime instance (not a Resource)

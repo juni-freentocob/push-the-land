@@ -8,7 +8,7 @@ extends Control
 @onready var board: Board = get_parent().get_parent().get_node("Board")
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_STOP
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 func handle_drop_from_card(card_view: CardView) -> bool:
 	var mouse_pos := get_viewport().get_mouse_position()
@@ -19,6 +19,5 @@ func handle_drop_from_card(card_view: CardView) -> bool:
 		hero_panel.accept_drop(card_view)
 		return true
 	if board.get_global_rect().has_point(mouse_pos) and board.can_accept_drop(card_view):
-		board.accept_drop(card_view)
-		return true
+		return board.accept_drop(card_view)
 	return false
