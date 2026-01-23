@@ -69,6 +69,17 @@ T8 (MVP combat + rewards)
 ## Next Steps (Planned)
 - M2: Theme branching (3 boxes) + multiple themes
 
+## M1.1 Status
+- T9: Boss real loop (no DebugBossButton dependency) — DONE
+- T10: Spirit + terrain -> enemy as main path — TODO
+- T11: Drop + growth loop to make boss winnable — TODO
+- T12: ThemeChoice leads to a real new round — TODO
+- T13: Docs + verification updates — TODO
+
+## Recent Decisions (M1.1)
+- Boss no longer depends on DebugBossButton; ChallengeBossButton drives combat.
+- ThemeChoice locks card drag until a choice is made.
+
 ## Verification Checklist (Current)
 - Drag card to HeroPanel: prints accept_drop log
 - Drag card to TrashZone: prints accept_drop log

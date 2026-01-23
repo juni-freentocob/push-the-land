@@ -7,6 +7,7 @@ signal hover_started(card_view: CardView)
 signal hover_ended(card_view: CardView)
 
 var def_id: StringName = &""
+var interaction_enabled: bool = true
 
 var _dragging: bool = false
 var _drag_offset: Vector2 = Vector2.ZERO
@@ -18,6 +19,7 @@ var _prev_top_level: bool = false
 @onready var highlight: Control = get_node_or_null("Highlight") as Control
 
 func _ready() -> void:
+	add_to_group("card_view")
 	if highlight != null:
 		highlight.visible = false
 		highlight.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -25,6 +27,8 @@ func _ready() -> void:
 		highlight.set_anchors_preset(Control.PRESET_FULL_RECT)
 
 func _gui_input(event: InputEvent) -> void:
+	if not interaction_enabled:
+		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			_dragging = true
@@ -57,9 +61,13 @@ func _process(_delta: float) -> void:
 		global_position = get_global_mouse_position() - _drag_offset
 
 func _mouse_entered() -> void:
+	if not interaction_enabled:
+		return
 	hover_started.emit(self)
 
 func _mouse_exited() -> void:
+	if not interaction_enabled:
+		return
 	hover_ended.emit(self)
 
 func set_highlighted(enabled: bool) -> void:

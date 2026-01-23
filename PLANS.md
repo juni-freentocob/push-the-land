@@ -130,6 +130,22 @@
 **Risks**
 - Drag UX is fiddly. Mitigation: snapping, clear drop zones, hover preview.
 
+### M1.1 – Swamp VS reinforcement (T9–T13)
+**Scope**
+- Close remaining loop gaps for boss flow, spirit+terrain main path, drops/growth, and real theme switch.
+**Deliverables**
+- T9: Boss real loop (no DebugBossButton dependency) – DONE
+- T10: Spirit + terrain -> enemy as main path – TODO
+- T11: Drop + growth loop to make boss winnable – TODO
+- T12: ThemeChoice leads to a real new round – TODO
+- T13: Docs + verification updates – TODO
+**T9 Completion**
+- 100 cards -> BossReady, BossPreview shows boss info + BossHP
+- ChallengeBossButton triggers boss combat (no DebugBossButton required)
+- BossHP reaches 0 -> ThemeChoice auto shows and stays above cards
+- ThemeChoice locks card drag; interaction resumes after selection
+- BossPreview hides after victory (0/Max visible before choice)
+
 ### M2 — Theme branching (3 boxes) + multiple themes (City / Swamp / Sanctuary)
 **Scope**
 - Real theme switching and deck definition per theme.

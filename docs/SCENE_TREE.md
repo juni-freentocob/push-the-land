@@ -74,6 +74,7 @@ Signals:
 ## BossPreview.tscn
 BossPreview (Control)
 - Portrait / Name / Skills / Weakness
+- ChallengeBossButton (Button)
 Responsibilities:
 - Display boss data at level start
 
@@ -86,6 +87,7 @@ Signals:
 - theme_chosen(theme_id)
 
 UI path notes:
+- UI/BossPreview/ChallengeBossButton
 - UI/ThemeChoice/VBoxContainer/BoxA
 - UI/ThemeChoice/VBoxContainer/BoxB
 - UI/ThemeChoice/VBoxContainer/BoxC

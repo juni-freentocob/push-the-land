@@ -17,6 +17,7 @@ extends Node
 @onready var seed_label: Label = _find_label("SeedLabel")
 @onready var spawn_label: Label = _find_label("SpawnLabel")
 @onready var debug_boss_button: Button = _find_button("DebugBossButton")
+@onready var challenge_boss_button: Button = get_node_or_null("UI/BossPreview/ChallengeBossButton") as Button
 
 const CARD_VIEW_SCENE: PackedScene = preload("res://scenes/cards/CardView.tscn")
 
@@ -25,6 +26,8 @@ var spawned_count: int = 0
 var active_seed: int = 0
 var boss_spawned: bool = false
 var boss_defeated: bool = false
+var boss_hp_max: int = 12
+var boss_hp_current: int = 0
 
 func _ready() -> void:
 	if theme == null:
@@ -34,6 +37,8 @@ func _ready() -> void:
 	if hud != null:
 		hud.z_index = 100
 	theme_choice.z_index = 200
+	boss_preview.hide_boss()
+	_set_boss_button_enabled(false)
 	_load_merge_rules()
 	board.set_merge_rules(merge_rules)
 	board.merge_happened.connect(_on_board_merge_happened)
@@ -45,10 +50,13 @@ func _ready() -> void:
 		push_error("[Main] DebugBossButton not found. Check UI/DebugHUD/DebugBox/DebugBossButton.")
 	else:
 		debug_boss_button.pressed.connect(debug_defeat_boss)
+	if challenge_boss_button == null:
+		push_error("[Main] ChallengeBossButton not found. Check UI/BossPreview/ChallengeBossButton.")
+	else:
+		challenge_boss_button.pressed.connect(_on_challenge_boss_pressed)
 	_setup_seed()
 	_update_debug_hud()
 	_spawn_initial_cards()
-	_show_boss_preview()
 
 func _setup_seed() -> void:
 	if use_fixed_seed:
@@ -80,10 +88,18 @@ func _try_spawn_boss() -> void:
 		return
 	if spawned_count >= total_spawn:
 		boss_spawned = true
-		print("[Main] Boss spawned (placeholder).")
+		boss_hp_current = boss_hp_max
+		_show_boss_preview()
+		_set_boss_button_enabled(true)
+		print("[Main] Boss ready.")
 
 func _show_boss_preview() -> void:
 	boss_preview.show_boss("Swamp King", "Fire", PackedStringArray(["Toxic Breath", "Vine Grasp"]))
+	boss_preview.set_boss_hp(boss_hp_current, boss_hp_max)
+
+func _set_boss_button_enabled(enabled: bool) -> void:
+	if challenge_boss_button != null:
+		challenge_boss_button.disabled = not enabled
 
 func _spawn_one() -> void:
 	var card_id := _pick_weighted_id(theme.deck_weights)
@@ -186,6 +202,49 @@ func _on_board_merge_happened(_input_a: StringName, _input_b: StringName, output
 func _on_theme_chosen(theme_id: StringName) -> void:
 	print("[Main] Theme chosen:", theme_id)
 	theme_choice.hide_choices()
+	_set_card_interaction_enabled(true)
+	if boss_defeated:
+		boss_preview.hide_boss()
+
+func _set_card_interaction_enabled(enabled: bool) -> void:
+	var cards := get_tree().get_nodes_in_group("card_view")
+	for node in cards:
+		var card := node as CardView
+		if card != null:
+			card.interaction_enabled = enabled
+
+func _on_challenge_boss_pressed() -> void:
+	if not boss_spawned or boss_defeated:
+		return
+	_resolve_boss_combat()
+
+func _resolve_boss_combat() -> void:
+	var boss_atk: int = 1
+	var boss_def: int = 0
+	var hero_hp: int = hero_panel.hp
+	var boss_hp: int = boss_hp_current
+	while hero_hp > 0 and boss_hp > 0:
+		var hero_dmg: int = max(hero_panel.get_attack() - boss_def, 1)
+		boss_hp -= hero_dmg
+		if boss_hp <= 0:
+			break
+		var boss_dmg: int = max(boss_atk - hero_panel.get_defense(), 1)
+		hero_hp -= boss_dmg
+	boss_hp_current = max(boss_hp, 0)
+	hero_panel.hp = max(hero_hp, 0)
+	boss_preview.set_boss_hp(boss_hp_current, boss_hp_max)
+	if boss_hp_current <= 0:
+		_on_boss_defeated()
+
+func _on_boss_defeated() -> void:
+	if boss_defeated:
+		return
+	boss_defeated = true
+	boss_preview.set_boss_hp(0, boss_hp_max)
+	_set_boss_button_enabled(false)
+	_set_card_interaction_enabled(false)
+	theme_choice.show_choices("Theme A", "Theme B", "Theme C")
+	print("[Main] Boss defeated.")
 
 func _on_equip_requested(card_view: CardView) -> void:
 	if card_view.def_id == &"wood_spear":
@@ -224,5 +283,7 @@ func debug_defeat_boss() -> void:
 		return
 	boss_defeated = true
 	boss_preview.hide_boss()
+	_set_boss_button_enabled(false)
+	_set_card_interaction_enabled(false)
 	theme_choice.show_choices("Theme A", "Theme B", "Theme C")
 	print("[Main] Debug defeat boss triggered.")
