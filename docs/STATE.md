@@ -1,6 +1,6 @@
 # PushTheLand — State Snapshot
 
-## Current Status (T1–T3)
+## Current Status (T1–T8)
 T1 (Project skeleton)
 - Main/Board/UI scenes in place
 - Scripts wired with basic logging and signals
@@ -24,6 +24,12 @@ T4 (Resources + Swamp data)
 - swamp_rules.tres: 1 MVP rule (spirit + mud -> swamp_enemy)
 - MissingResource/class_name issues resolved (Inspector editable)
 
+T5 (Spawner + RNG + DebugHUD)
+- Theme-driven spawn (ThemeDef.deck_weights)
+- Deterministic RNG (fixed seed or system time)
+- DebugHUD shows seed/theme/spawned count
+- Spawn layout: first grid cells; extras stacked in OverflowArea
+
 T6 (Merge + Hover + Overflow)
 - MergeRule data-driven; order-insensitive match
 - Merge generates swamp_enemy MVP output
@@ -35,7 +41,13 @@ T7 (BossPreview + ThemeChoice)
 - Boss spawn placeholder after 100 cards
 - DebugBossButton triggers boss defeat and ThemeChoice
 - ThemeChoice selection hides UI
-- Boss spawn is a state event only; real combat in T8
+- Boss spawn is a state event only; combat remains placeholder
+
+T8 (MVP combat + rewards)
+- Trash rewards: drop card in TrashZone -> XP +1
+- Equipment: drop wood_spear in HeroPanel -> ATK +1
+- Combat: drop swamp_enemy in HeroPanel -> HP down, XP +2
+- UI stats (HP/ATK/DEF/XP) update live
 
 ## Key Decisions
 - Manual drag/drop only (no Control drag/drop APIs)
@@ -51,11 +63,7 @@ T7 (BossPreview + ThemeChoice)
 - CardLayer hit-tests ColorRect bounds for UI drops
 
 ## Next Steps (Planned)
-- T5: Card spawner, deterministic RNG seed, debug HUD
-- T5: Card spawner, deterministic RNG seed, debug HUD
-- T6: Merge rules + hover highlight
-- T7: Boss preview + boss spawn + ThemeChoice flow
-- T8: MVP combat + XP + trash rewards
+- M2: Theme branching (3 boxes) + multiple themes
 
 ## Verification Checklist (Current)
 - Drag card to HeroPanel: prints accept_drop log

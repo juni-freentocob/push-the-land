@@ -2,32 +2,449 @@
 [FILE: main.gd] 
 extends Node
 
+@export var theme: ThemeDef
+@export var total_spawn: int = 100
+@export var use_fixed_seed: bool = true
+@export var fixed_seed: int = 12345
+@export var merge_rules: Array[MergeRule] = []
+@export var merge_rules_path: String = "res://data/merge/swamp_rules.tres"
+
 @onready var board: Board = $Board
 @onready var hero_panel: HeroPanel = $UI/HeroPanel
 @onready var trash_zone: TrashZone = $UI/TrashZone
 @onready var boss_preview: BossPreview = $UI/BossPreview
 @onready var theme_choice: ThemeChoice = $UI/ThemeChoice
+@onready var card_layer: CardLayer = $UI/CardLayer
+@onready var overflow_area: Control = get_node_or_null("UI/OverflowArea") as Control
+@onready var seed_label: Label = _find_label("SeedLabel")
+@onready var spawn_label: Label = _find_label("SpawnLabel")
+@onready var debug_boss_button: Button = _find_button("DebugBossButton")
+
+const CARD_VIEW_SCENE: PackedScene = preload("res://scenes/cards/CardView.tscn")
+
+var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+var spawned_count: int = 0
+var active_seed: int = 0
+var boss_spawned: bool = false
+var boss_defeated: bool = false
 
 func _ready() -> void:
-	print("[Main] Ready")
-	print("[Main] Board:", board)
-	print("[Main] HeroPanel:", hero_panel)
-	print("[Main] TrashZone:", trash_zone)
-	print("[Main] BossPreview:", boss_preview)
-	print("[Main] ThemeChoice:", theme_choice)
+	if theme == null:
+		push_error("[Main] ThemeDef not assigned.")
+		return
+	var hud: Control = get_node_or_null("UI/DebugHUD") as Control
+	if hud != null:
+		hud.z_index = 100
+	theme_choice.z_index = 200
+	_load_merge_rules()
+	board.set_merge_rules(merge_rules)
+	board.merge_happened.connect(_on_board_merge_happened)
+	theme_choice.theme_chosen.connect(_on_theme_chosen)
+	hero_panel.equip_requested.connect(_on_equip_requested)
+	hero_panel.combat_requested.connect(_on_combat_requested)
+	trash_zone.delete_requested.connect(_on_delete_requested)
+	if debug_boss_button == null:
+		push_error("[Main] DebugBossButton not found. Check UI/DebugHUD/DebugBox/DebugBossButton.")
+	else:
+		debug_boss_button.pressed.connect(debug_defeat_boss)
+	_setup_seed()
+	_update_debug_hud()
+	_spawn_initial_cards()
+	_show_boss_preview()
+
+func _setup_seed() -> void:
+	if use_fixed_seed:
+		active_seed = fixed_seed
+	else:
+		active_seed = int(Time.get_unix_time_from_system())
+	rng.seed = active_seed
+
+func _load_merge_rules() -> void:
+	if not merge_rules.is_empty():
+		return
+	if merge_rules_path.is_empty():
+		push_error("[Main] Merge rules path is empty.")
+		return
+	var res: Resource = load(merge_rules_path)
+	if res == null:
+		push_error("[Main] Failed to load merge rules: %s" % merge_rules_path)
+		return
+	merge_rules = [res as MergeRule]
+
+func _spawn_initial_cards() -> void:
+	for _i in range(total_spawn):
+		_spawn_one()
+	_update_debug_hud()
+	_try_spawn_boss()
+
+func _try_spawn_boss() -> void:
+	if boss_spawned:
+		return
+	if spawned_count >= total_spawn:
+		boss_spawned = true
+		print("[Main] Boss spawned (placeholder).")
+
+func _show_boss_preview() -> void:
+	boss_preview.show_boss("Swamp King", "Fire", PackedStringArray(["Toxic Breath", "Vine Grasp"]))
+
+func _spawn_one() -> void:
+	var card_id := _pick_weighted_id(theme.deck_weights)
+	var card_view := CARD_VIEW_SCENE.instantiate() as CardView
+	card_layer.add_child(card_view)
+	card_view.def_id = card_id
+	card_view.drag_started.connect(_on_card_drag_started)
+	card_view.drag_ended.connect(_on_card_drag_ended)
+	card_view.hover_started.connect(_on_card_hover_started)
+	card_view.hover_ended.connect(_on_card_hover_ended)
+	var label := card_view.get_node_or_null("Label") as Label
+	if label != null:
+		label.text = String(card_id)
+	_place_spawned_card(card_view, spawned_count)
+	spawned_count += 1
+
+func _place_spawned_card(card_view: CardView, index: int) -> void:
+	var max_board := board.board_size * board.board_size
+	if index < max_board:
+		var cell := Vector2i(index % board.board_size, int(index / board.board_size))
+		board.place_card_at_cell(card_view, cell)
+	else:
+		var extra_index := index - max_board
+		var pile_offset := Vector2((extra_index % 6) * 6, int(extra_index / 6) * 6)
+		_place_in_overflow(card_view, pile_offset)
+
+func _place_in_overflow(card_view: CardView, pile_offset: Vector2) -> void:
+	if overflow_area == null:
+		card_view.global_position = board.global_position + Vector2(12, 12) + pile_offset
+		return
+	card_view.reparent(overflow_area)
+	card_view.global_position = overflow_area.get_global_rect().position + Vector2(8, 8) + pile_offset
+
+func _pick_weighted_id(weights: Dictionary) -> StringName:
+	if weights.is_empty():
+		return &""
+	var total: int = 0
+	for key in weights.keys():
+		total += int(weights[key])
+	var roll: int = rng.randi_range(1, total)
+	var acc: int = 0
+	for key in weights.keys():
+		acc += int(weights[key])
+		if roll <= acc:
+			return StringName(key)
+	return StringName(weights.keys()[0])
+
+func _update_debug_hud() -> void:
+	if seed_label == null or spawn_label == null:
+		push_error("[Main] DebugHUD labels missing. Check UI/DebugHUD/DebugBox/SeedLabel + SpawnLabel.")
+		return
+	seed_label.text = "Seed: %d" % active_seed
+	spawn_label.text = "Theme: %s | Spawned: %d/%d" % [theme.display_name, spawned_count, total_spawn]
+
+func _find_label(label_name: String) -> Label:
+	var node: Node = get_node_or_null("UI/DebugHUD/DebugBox/%s" % label_name) as Node
+	if node == null:
+		node = get_node_or_null("UI/DebugHUD/%s" % label_name)
+	if node == null:
+		var hud: Control = get_node_or_null("UI/DebugHUD") as Control
+		if hud != null:
+			node = hud.find_child(label_name, true, false)
+	return node as Label
+
+func _find_button(button_name: String) -> Button:
+	var node: Node = get_node_or_null("UI/DebugHUD/DebugBox/%s" % button_name) as Node
+	if node == null:
+		node = get_node_or_null("UI/DebugHUD/%s" % button_name)
+	if node == null:
+		var hud: Control = get_node_or_null("UI/DebugHUD") as Control
+		if hud != null:
+			node = hud.find_child(button_name, true, false)
+	return node as Button
+
+func _on_card_hover_started(card_view: CardView) -> void:
+	board.highlight_mergeable(card_view.def_id, card_view)
+
+func _on_card_hover_ended(_card_view: CardView) -> void:
+	board.clear_highlights()
+
+func _on_card_drag_started(card_view: CardView) -> void:
+	board.set_hover_source(card_view.def_id, card_view)
+
+func _on_card_drag_ended(_card_view: CardView) -> void:
+	board.clear_hover_source()
+
+func _on_board_merge_happened(_input_a: StringName, _input_b: StringName, output: StringName, cell: Vector2i) -> void:
+	var card_view := CARD_VIEW_SCENE.instantiate() as CardView
+	card_layer.add_child(card_view)
+	card_view.def_id = output
+	card_view.drag_started.connect(_on_card_drag_started)
+	card_view.drag_ended.connect(_on_card_drag_ended)
+	card_view.hover_started.connect(_on_card_hover_started)
+	card_view.hover_ended.connect(_on_card_hover_ended)
+	var label := card_view.get_node_or_null("Label") as Label
+	if label != null:
+		label.text = String(output)
+	board.place_card_at_cell(card_view, cell)
+
+func _on_theme_chosen(theme_id: StringName) -> void:
+	print("[Main] Theme chosen:", theme_id)
+	theme_choice.hide_choices()
+
+func _on_equip_requested(card_view: CardView) -> void:
+	if card_view.def_id == &"wood_spear":
+		hero_panel.apply_equipment_bonus({"atk_bonus": 1})
+	_consume_card(card_view)
+
+func _on_combat_requested(card_view: CardView) -> void:
+	if card_view.def_id != &"swamp_enemy":
+		return
+	var enemy_hp: int = 3
+	var enemy_atk: int = 1
+	var enemy_def: int = 0
+	var hero_hp: int = hero_panel.hp
+	while hero_hp > 0 and enemy_hp > 0:
+		var hero_dmg: int = max(hero_panel.get_attack() - enemy_def, 1)
+		enemy_hp -= hero_dmg
+		if enemy_hp <= 0:
+			break
+		var enemy_dmg: int = max(enemy_atk - hero_panel.get_defense(), 1)
+		hero_hp -= enemy_dmg
+	hero_panel.hp = max(hero_hp, 0)
+	hero_panel.add_xp(2)
+	_consume_card(card_view)
+
+func _on_delete_requested(card_view: CardView) -> void:
+	hero_panel.add_xp(1)
+	_consume_card(card_view)
+
+func _consume_card(card_view: CardView) -> void:
+	board.remove_card(card_view)
+	card_view.queue_free()
+
+func debug_defeat_boss() -> void:
+	boss_spawned = true
+	if boss_defeated:
+		return
+	boss_defeated = true
+	boss_preview.hide_boss()
+	theme_choice.show_choices("Theme A", "Theme B", "Theme C")
+	print("[Main] Debug defeat boss triggered.")
  
 [FILE: board.gd] 
 class_name Board
 extends Control
 
 signal board_cell_dropped(card_view: Node, cell: Vector2i)
+signal merge_happened(input_a: StringName, input_b: StringName, output: StringName, cell: Vector2i)
+
+@export var board_size: int = 9
+@export var cell_size: int = 64
+@export var hover_debug: bool = true
+
+@onready var occupancy_layer: Control = $OccupancyLayer
+
+var occupancy: Dictionary[Vector2i, CardView] = {}
+var merge_rules: Array[MergeRule] = []
+var _hover_def_id: StringName = &""
+var _hover_locked: bool = false
 
 func _ready() -> void:
-	print("[Board] Ready")
+	pass
+
+func _process(_delta: float) -> void:
+	if hover_debug:
+		if not _hover_locked:
+			_update_hover_highlight()
+
+func can_accept_drop(_card_view: CardView) -> bool:
+	return true
+
+func accept_drop(card_view: CardView) -> bool:
+	var card_center := card_view.get_global_rect().position + (card_view.size * 0.5)
+	var cell := global_pos_to_cell(card_center)
+	if not _is_cell_in_bounds(cell):
+		print("[Board] Drop rejected (out of bounds):", cell)
+		return false
+	var existing: CardView = occupancy.get(cell) as CardView
+	if existing != null and existing != card_view:
+		var rule := _find_merge_rule(card_view.def_id, existing.def_id)
+		if rule != null:
+			return _resolve_merge(existing, card_view, rule, cell)
+		print("[Board] Drop rejected (occupied):", cell)
+		return false
+	_remove_card_from_occupancy(card_view)
+	occupancy[cell] = card_view
+	card_view.reparent(occupancy_layer)
+	card_view.global_position = cell_to_global_pos(cell, card_view.size)
+	print("[Board] Drop accepted (cell):", cell)
+	return true
+
+func cell_to_global_pos(cell: Vector2i, card_size: Vector2) -> Vector2:
+	var board_origin := get_global_rect().position
+	var cell_origin := board_origin + Vector2(cell.x * cell_size, cell.y * cell_size)
+	var cell_center := cell_origin + Vector2(cell_size * 0.5, cell_size * 0.5)
+	return cell_center - (card_size * 0.5)
+
+func global_pos_to_cell(global_pos: Vector2) -> Vector2i:
+	var board_origin := get_global_rect().position
+	var local := global_pos - board_origin
+	return Vector2i(floor(local.x / cell_size), floor(local.y / cell_size))
+
+func _is_cell_in_bounds(cell: Vector2i) -> bool:
+	return cell.x >= 0 and cell.y >= 0 and cell.x < board_size and cell.y < board_size
+
+func _remove_card_from_occupancy(card_view: CardView) -> void:
+	var to_remove: Vector2i = Vector2i(-1, -1)
+	for cell: Vector2i in occupancy.keys():
+		if occupancy[cell] == card_view:
+			to_remove = cell
+			break
+	if to_remove.x != -1:
+		occupancy.erase(to_remove)
+
+func remove_card(card_view: CardView) -> void:
+	_remove_card_from_occupancy(card_view)
+
+func set_merge_rules(rules: Array[MergeRule]) -> void:
+	merge_rules = []
+	for rule in rules:
+		if rule != null:
+			merge_rules.append(rule)
+
+func place_card_at_cell(card_view: CardView, cell: Vector2i) -> void:
+	occupancy[cell] = card_view
+	card_view.reparent(occupancy_layer)
+	card_view.global_position = cell_to_global_pos(cell, card_view.size)
+
+func highlight_mergeable(def_id: StringName, exclude: CardView = null) -> void:
+	for cell: Vector2i in occupancy.keys():
+		var other := occupancy[cell]
+		if other == null:
+			continue
+		if exclude != null and other == exclude:
+			other.set_highlighted(false)
+			continue
+		var can_merge := _find_merge_rule(def_id, other.def_id) != null
+		other.set_highlighted(can_merge)
+
+func clear_highlights() -> void:
+	for cell: Vector2i in occupancy.keys():
+		var other := occupancy[cell]
+		if other != null:
+			other.set_highlighted(false)
+	_hover_def_id = &""
+
+func set_hover_source(def_id: StringName, exclude: CardView = null) -> void:
+	_hover_locked = true
+	_hover_def_id = def_id
+	highlight_mergeable(def_id, exclude)
+
+func clear_hover_source() -> void:
+	_hover_locked = false
+	clear_highlights()
+
+func _find_merge_rule(id_a: StringName, id_b: StringName) -> MergeRule:
+	for rule in merge_rules:
+		if rule == null:
+			continue
+		if _rule_matches(rule, id_a, id_b):
+			return rule
+	return null
+
+func _rule_matches(rule: MergeRule, id_a: StringName, id_b: StringName) -> bool:
+	if rule.inputs.size() != 2:
+		return false
+	var a := String(id_a)
+	var b := String(id_b)
+	if a == "" or b == "":
+		return false
+	if a == b:
+		return rule.inputs[0] == a and rule.inputs[1] == a
+	return rule.inputs.has(a) and rule.inputs.has(b)
+
+func _resolve_merge(existing: CardView, incoming: CardView, rule: MergeRule, cell: Vector2i) -> bool:
+	_remove_card_from_occupancy(existing)
+	_remove_card_from_occupancy(incoming)
+	existing.queue_free()
+	incoming.queue_free()
+	merge_happened.emit(existing.def_id, incoming.def_id, rule.output, cell)
+	return true
+
+func _update_hover_highlight() -> void:
+	var mouse_pos := get_viewport().get_mouse_position()
+	if not get_global_rect().has_point(mouse_pos):
+		if _hover_def_id != &"":
+			clear_highlights()
+		return
+	var cell := global_pos_to_cell(mouse_pos)
+	var hovered: CardView = occupancy.get(cell) as CardView
+	var new_def_id := hovered.def_id if hovered != null else &""
+	if new_def_id == _hover_def_id:
+		return
+	_hover_def_id = new_def_id
+	if _hover_def_id == &"":
+		clear_highlights()
+	else:
+		highlight_mergeable(_hover_def_id)
 
 func debug_drop(card_view: Node, cell: Vector2i) -> void:
 	print("[Board] Drop request:", card_view, "cell:", cell)
 	board_cell_dropped.emit(card_view, cell)
+ 
+[FILE: grid_visual.gd] 
+class_name GridVisual
+extends Control
+
+@export var line_color: Color = Color(0.8, 0.8, 0.8, 0.35)
+@export var border_color: Color = Color(1, 1, 1, 0.6)
+@export var hover_color: Color = Color(1, 1, 0, 0.18)
+
+@onready var board: Board = get_parent()
+
+var _last_hover_cell: Vector2i = Vector2i(-999, -999)
+
+func _ready() -> void:
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	queue_redraw()
+
+func _process(_delta: float) -> void:
+	var cell := _mouse_cell()
+	if cell != _last_hover_cell:
+		_last_hover_cell = cell
+		queue_redraw()
+
+func _draw() -> void:
+	if board == null:
+		return
+	var size_px := Vector2(board.board_size * board.cell_size, board.board_size * board.cell_size)
+	_draw_grid(size_px)
+	_draw_border(size_px)
+	_draw_hover(size_px)
+
+func _draw_grid(size_px: Vector2) -> void:
+	for i in range(1, board.board_size):
+		var x := float(i * board.cell_size)
+		draw_line(Vector2(x, 0), Vector2(x, size_px.y), line_color, 1.0)
+		var y := float(i * board.cell_size)
+		draw_line(Vector2(0, y), Vector2(size_px.x, y), line_color, 1.0)
+
+func _draw_border(size_px: Vector2) -> void:
+	draw_rect(Rect2(Vector2.ZERO, size_px), border_color, false, 2.0)
+
+func _draw_hover(_size_px: Vector2) -> void:
+	var cell := _last_hover_cell
+	if cell.x < 0 or cell.y < 0 or cell.x >= board.board_size or cell.y >= board.board_size:
+		return
+	var rect := Rect2(
+		Vector2(cell.x * board.cell_size, cell.y * board.cell_size),
+		Vector2(board.cell_size, board.cell_size)
+	)
+	draw_rect(rect, hover_color, true)
+
+func _mouse_cell() -> Vector2i:
+	if board == null:
+		return Vector2i(-999, -999)
+	var local := board.get_local_mouse_position()
+	return Vector2i(floor(local.x / board.cell_size), floor(local.y / board.cell_size))
  
 [FILE: card_view.gd] 
 class_name CardView
@@ -35,66 +452,252 @@ extends Control
 
 signal drag_started(card_view: Node)
 signal drag_ended(card_view: Node)
+signal hover_started(card_view: CardView)
+signal hover_ended(card_view: CardView)
 
-const DRAG_KEY: StringName = &"card_view"
+var def_id: StringName = &""
+
+var _dragging: bool = false
+var _drag_offset: Vector2 = Vector2.ZERO
+var _start_pos: Vector2 = Vector2.ZERO
+var _prev_z_index: int = 0
+var _prev_z_relative: bool = true
+var _prev_top_level: bool = false
+
+@onready var highlight: Control = get_node_or_null("Highlight") as Control
 
 func _ready() -> void:
-	print("[CardView] Ready")
+	if highlight != null:
+		highlight.visible = false
+		highlight.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		highlight.z_index = 10
+		highlight.set_anchors_preset(Control.PRESET_FULL_RECT)
 
-func _get_drag_data(_at_position: Vector2) -> Variant:
-	drag_started.emit(self)
-	var preview := ColorRect.new()
-	preview.color = Color(1, 1, 1, 0.4)
-	preview.size = size
-	set_drag_preview(preview)
-	return {DRAG_KEY: self}
+func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			_dragging = true
+			_start_pos = global_position
+			_drag_offset = get_global_mouse_position() - global_position
+			_prev_z_index = z_index
+			_prev_z_relative = z_as_relative
+			_prev_top_level = is_set_as_top_level()
+			set_as_top_level(true)
+			z_as_relative = false
+			z_index = 1000
+			drag_started.emit(self)
+			move_to_front()
+			get_viewport().set_input_as_handled()
+		elif _dragging:
+			_dragging = false
+			z_index = _prev_z_index
+			z_as_relative = _prev_z_relative
+			set_as_top_level(_prev_top_level)
+			drag_ended.emit(self)
+			var accepted := false
+			var card_layer := _find_card_layer()
+			if card_layer != null:
+				accepted = card_layer.handle_drop_from_card(self)
+			if not accepted:
+				global_position = _start_pos
 
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_DRAG_END:
-		drag_ended.emit(self)
+func _process(_delta: float) -> void:
+	if _dragging:
+		global_position = get_global_mouse_position() - _drag_offset
 
-func debug_drag_start() -> void:
-	print("[CardView] Drag started")
-	drag_started.emit(self)
+func _mouse_entered() -> void:
+	hover_started.emit(self)
 
-func debug_drag_end() -> void:
-	print("[CardView] Drag ended")
-	drag_ended.emit(self)
+func _mouse_exited() -> void:
+	hover_ended.emit(self)
+
+func set_highlighted(enabled: bool) -> void:
+	if highlight != null:
+		highlight.visible = enabled
+
+func _find_card_layer() -> Node:
+	var node := get_parent()
+	while node != null:
+		if node.has_method("handle_drop_from_card"):
+			return node
+		node = node.get_parent()
+	var root := get_tree().root
+	if root == null:
+		return null
+	var found := root.find_child("CardLayer", true, false)
+	if found != null and found.has_method("handle_drop_from_card"):
+		return found
+	return null
+ 
+[FILE: card_def.gd] 
+class_name CardDef
+extends Resource
+
+enum CardKind {
+	TERRAIN_PART,
+	SPIRIT,
+	EQUIPMENT,
+	JUNK,
+	GENERATED_ENEMY
+}
+
+enum Rarity {
+	COMMON,
+	UNCOMMON,
+	RARE,
+	EPIC,
+	LEGENDARY
+}
+
+enum EquipmentSlot {
+	NONE,
+	WEAPON,
+	ARMOR,
+	TRINKET
+}
+
+enum SpiritTier {
+	NORMAL,
+	ELITE
+}
+
+@export var id: StringName
+@export var display_name: String = ""
+@export var kind: CardKind = CardKind.TERRAIN_PART
+@export var rarity: Rarity = Rarity.COMMON
+@export var theme_tags: PackedStringArray = []
+@export var stackable: bool = false
+@export var equipment_slot: EquipmentSlot = EquipmentSlot.NONE
+@export var stats: Dictionary = {}
+@export var terrain_part: StringName = &""
+@export var spirit_tier: SpiritTier = SpiritTier.NORMAL
+ 
+[FILE: merge_rule.gd] 
+class_name MergeRule
+extends Resource
+
+@export var id: StringName
+@export var inputs: PackedStringArray = []
+@export var output: StringName
+@export var consume_inputs: bool = true
+@export var output_count: int = 1
+@export var notes: String = ""
+ 
+[FILE: theme_def.gd] 
+class_name ThemeDef
+extends Resource
+
+@export var id: StringName
+@export var display_name: String = ""
+@export var deck_weights: Dictionary = {}
+@export var boss_id: StringName = &""
+@export var visuals: Dictionary = {}
+@export var next_theme_pool: PackedStringArray = []
  
 [FILE: boss_preview.gd] 
 class_name BossPreview
 extends Control
 
+@onready var name_label: Label = $NameLabel
+@onready var weakness_label: Label = $WeaknessLabel
+@onready var skills_label: Label = $SkillsLabel
+
+func show_boss(name_text: String, weakness: String, skills: PackedStringArray) -> void:
+	visible = true
+	name_label.text = "Boss: %s" % name_text
+	weakness_label.text = "Weakness: %s" % weakness
+	skills_label.text = "Skills: %s" % ", ".join(skills)
+
+func hide_boss() -> void:
+	visible = false
+ 
+[FILE: card_layer.gd] 
+class_name CardLayer
+extends Control
+
+@onready var hero_panel: HeroPanel = get_parent().get_node("HeroPanel")
+@onready var hero_area: Control = hero_panel.get_node("ColorRect")
+@onready var trash_zone: TrashZone = get_parent().get_node("TrashZone")
+@onready var trash_area: Control = trash_zone.get_node("ColorRect")
+@onready var board: Board = get_parent().get_parent().get_node("Board")
+
 func _ready() -> void:
-	print("[BossPreview] Ready")
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+func handle_drop_from_card(card_view: CardView) -> bool:
+	var mouse_pos := get_viewport().get_mouse_position()
+	if trash_area.get_global_rect().has_point(mouse_pos) and trash_zone.can_accept_drop(card_view):
+		trash_zone.accept_drop(card_view)
+		return true
+	if hero_area.get_global_rect().has_point(mouse_pos) and hero_panel.can_accept_drop(card_view):
+		hero_panel.accept_drop(card_view)
+		return true
+	if board.get_global_rect().has_point(mouse_pos) and board.can_accept_drop(card_view):
+		return board.accept_drop(card_view)
+	return false
  
 [FILE: hero_panel.gd] 
 class_name HeroPanel
 extends Control
 
-signal equip_requested(card_view: Node)
-signal combat_requested(enemy_card_view: Node)
+signal equip_requested(card_view: CardView)
+signal combat_requested(enemy_card_view: CardView)
 
-const DRAG_KEY: StringName = &"card_view"
+@export var base_hp: int = 10
+@export var base_atk: int = 2
+@export var base_def: int = 0
+
+@onready var hp_label: Label = $HpLabel
+@onready var atk_label: Label = $AtkLabel
+@onready var def_label: Label = $DefLabel
+@onready var xp_label: Label = $XpLabel
+
+var hp: int = 0
+var atk: int = 0
+var defense: int = 0
+var xp: int = 0
 
 func _ready() -> void:
-	print("[HeroPanel] Ready")
+	hp = base_hp
+	atk = base_atk
+	defense = base_def
+	xp = 0
+	_update_labels()
 
-func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
-	return data is Dictionary and data.has(DRAG_KEY) and data[DRAG_KEY] is CardView
+func accept_drop(card_view: CardView) -> void:
+	if card_view.def_id == &"swamp_enemy":
+		combat_requested.emit(card_view)
+	else:
+		equip_requested.emit(card_view)
 
-func _drop_data(_at_position: Vector2, data: Variant) -> void:
-	var card_view: CardView = data[DRAG_KEY]
-	print("[HeroPanel] Drop accepted:", card_view)
-	equip_requested.emit(card_view)
+func can_accept_drop(_card_view: CardView) -> bool:
+	return true
 
-func debug_equip(card_view: Node) -> void:
-	print("[HeroPanel] Equip requested:", card_view)
-	equip_requested.emit(card_view)
+func apply_equipment_bonus(stats: Dictionary) -> void:
+	atk += int(stats.get("atk_bonus", 0))
+	defense += int(stats.get("def_bonus", 0))
+	hp += int(stats.get("hp_bonus", 0))
+	_update_labels()
 
-func debug_combat(enemy_card_view: Node) -> void:
-	print("[HeroPanel] Combat requested:", enemy_card_view)
-	combat_requested.emit(enemy_card_view)
+func apply_damage(amount: int) -> void:
+	hp = max(hp - amount, 0)
+	_update_labels()
+
+func add_xp(amount: int) -> void:
+	xp += amount
+	_update_labels()
+
+func get_attack() -> int:
+	return atk
+
+func get_defense() -> int:
+	return defense
+
+func _update_labels() -> void:
+	hp_label.text = "HP: %d" % hp
+	atk_label.text = "ATK: %d" % atk
+	def_label.text = "DEF: %d" % defense
+	xp_label.text = "XP: %d" % xp
  
 [FILE: theme_choice.gd] 
 class_name ThemeChoice
@@ -102,32 +705,44 @@ extends Control
 
 signal theme_chosen(theme_id: StringName)
 
-func _ready() -> void:
-	print("[ThemeChoice] Ready (visible=%s)" % self.visible)
+@onready var box_a: Button = get_node_or_null("VBoxContainer/BoxA") as Button
+@onready var box_b: Button = get_node_or_null("VBoxContainer/BoxB") as Button
+@onready var box_c: Button = get_node_or_null("VBoxContainer/BoxC") as Button
 
-func debug_choose(theme_id: StringName) -> void:
-	print("[ThemeChoice] Theme chosen:", theme_id)
-	theme_chosen.emit(theme_id)
+func _ready() -> void:
+	visible = false
+	if box_a == null or box_b == null or box_c == null:
+		push_error("[ThemeChoice] Missing BoxA/BoxB/BoxC buttons.")
+		return
+	box_a.pressed.connect(func(): _choose(&"theme_a"))
+	box_b.pressed.connect(func(): _choose(&"theme_b"))
+	box_c.pressed.connect(func(): _choose(&"theme_c"))
+
+func show_choices(a: String, b: String, c: String) -> void:
+	if box_a == null or box_b == null or box_c == null:
+		return
+	visible = true
+	box_a.text = a
+	box_b.text = b
+	box_c.text = c
+
+func hide_choices() -> void:
+	visible = false
+
+func _choose(theme_id: StringName) -> void:
+	emit_signal("theme_chosen", theme_id)
  
 [FILE: trash_zone.gd] 
 class_name TrashZone
 extends Control
 
-signal delete_requested(card_view: Node)
-
-const DRAG_KEY: StringName = &"card_view"
+signal delete_requested(card_view: CardView)
 
 func _ready() -> void:
-	print("[TrashZone] Ready")
+	pass
 
-func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
-	return data is Dictionary and data.has(DRAG_KEY) and data[DRAG_KEY] is CardView
-
-func _drop_data(_at_position: Vector2, data: Variant) -> void:
-	var card_view: CardView = data[DRAG_KEY]
-	print("[TrashZone] Drop accepted:", card_view)
+func accept_drop(card_view: CardView) -> void:
 	delete_requested.emit(card_view)
 
-func debug_delete(card_view: Node) -> void:
-	print("[TrashZone] Delete requested:", card_view)
-	delete_requested.emit(card_view)
+func can_accept_drop(_card_view: CardView) -> bool:
+	return true

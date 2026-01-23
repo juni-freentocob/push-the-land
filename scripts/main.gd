@@ -30,7 +30,7 @@ func _ready() -> void:
 	if theme == null:
 		push_error("[Main] ThemeDef not assigned.")
 		return
-	var hud := get_node_or_null("UI/DebugHUD") as Control
+	var hud: Control = get_node_or_null("UI/DebugHUD") as Control
 	if hud != null:
 		hud.z_index = 100
 	theme_choice.z_index = 200
@@ -38,6 +38,9 @@ func _ready() -> void:
 	board.set_merge_rules(merge_rules)
 	board.merge_happened.connect(_on_board_merge_happened)
 	theme_choice.theme_chosen.connect(_on_theme_chosen)
+	hero_panel.equip_requested.connect(_on_equip_requested)
+	hero_panel.combat_requested.connect(_on_combat_requested)
+	trash_zone.delete_requested.connect(_on_delete_requested)
 	if debug_boss_button == null:
 		push_error("[Main] DebugBossButton not found. Check UI/DebugHUD/DebugBox/DebugBossButton.")
 	else:
@@ -60,7 +63,7 @@ func _load_merge_rules() -> void:
 	if merge_rules_path.is_empty():
 		push_error("[Main] Merge rules path is empty.")
 		return
-	var res := load(merge_rules_path)
+	var res: Resource = load(merge_rules_path)
 	if res == null:
 		push_error("[Main] Failed to load merge rules: %s" % merge_rules_path)
 		return
@@ -136,21 +139,21 @@ func _update_debug_hud() -> void:
 	spawn_label.text = "Theme: %s | Spawned: %d/%d" % [theme.display_name, spawned_count, total_spawn]
 
 func _find_label(label_name: String) -> Label:
-	var node := get_node_or_null("UI/DebugHUD/DebugBox/%s" % label_name)
+	var node: Node = get_node_or_null("UI/DebugHUD/DebugBox/%s" % label_name) as Node
 	if node == null:
 		node = get_node_or_null("UI/DebugHUD/%s" % label_name)
 	if node == null:
-		var hud := get_node_or_null("UI/DebugHUD")
+		var hud: Control = get_node_or_null("UI/DebugHUD") as Control
 		if hud != null:
 			node = hud.find_child(label_name, true, false)
 	return node as Label
 
 func _find_button(button_name: String) -> Button:
-	var node := get_node_or_null("UI/DebugHUD/DebugBox/%s" % button_name)
+	var node: Node = get_node_or_null("UI/DebugHUD/DebugBox/%s" % button_name) as Node
 	if node == null:
 		node = get_node_or_null("UI/DebugHUD/%s" % button_name)
 	if node == null:
-		var hud := get_node_or_null("UI/DebugHUD")
+		var hud: Control = get_node_or_null("UI/DebugHUD") as Control
 		if hud != null:
 			node = hud.find_child(button_name, true, false)
 	return node as Button
@@ -183,6 +186,37 @@ func _on_board_merge_happened(_input_a: StringName, _input_b: StringName, output
 func _on_theme_chosen(theme_id: StringName) -> void:
 	print("[Main] Theme chosen:", theme_id)
 	theme_choice.hide_choices()
+
+func _on_equip_requested(card_view: CardView) -> void:
+	if card_view.def_id == &"wood_spear":
+		hero_panel.apply_equipment_bonus({"atk_bonus": 1})
+	_consume_card(card_view)
+
+func _on_combat_requested(card_view: CardView) -> void:
+	if card_view.def_id != &"swamp_enemy":
+		return
+	var enemy_hp: int = 3
+	var enemy_atk: int = 1
+	var enemy_def: int = 0
+	var hero_hp: int = hero_panel.hp
+	while hero_hp > 0 and enemy_hp > 0:
+		var hero_dmg: int = max(hero_panel.get_attack() - enemy_def, 1)
+		enemy_hp -= hero_dmg
+		if enemy_hp <= 0:
+			break
+		var enemy_dmg: int = max(enemy_atk - hero_panel.get_defense(), 1)
+		hero_hp -= enemy_dmg
+	hero_panel.hp = max(hero_hp, 0)
+	hero_panel.add_xp(2)
+	_consume_card(card_view)
+
+func _on_delete_requested(card_view: CardView) -> void:
+	hero_panel.add_xp(1)
+	_consume_card(card_view)
+
+func _consume_card(card_view: CardView) -> void:
+	board.remove_card(card_view)
+	card_view.queue_free()
 
 func debug_defeat_boss() -> void:
 	boss_spawned = true

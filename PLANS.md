@@ -76,7 +76,7 @@
 **Risks**
 - Over-engineering early. Mitigation: keep M0 minimal and support M1 only.
 
-### M1 — Vertical Slice (Swamp theme) — complete 100 cards -> Boss -> Victory -> ThemeChoice (T3 DONE, T4 DONE, T5 DONE, T6 DONE, T7 DONE)
+### M1 — Vertical Slice (Swamp theme) — complete 100 cards -> Boss -> Victory -> ThemeChoice (T3 DONE, T4 DONE, T5 DONE, T6 DONE, T7 DONE, T8 DONE)
 **Scope**
 - Implement full loop for a single theme (Swamp) with minimal but playable rules.
 **Deliverables**
@@ -91,6 +91,12 @@
 - Boss spawn placeholder after 100 cards: "Boss spawned (placeholder)"
 - ThemeChoice flow: Debug button triggers boss defeat -> 3 buttons -> selection hides UI
 - UI fixes: ThemeChoice path (VBoxContainer/BoxA|BoxB|BoxC), z_index on top, DebugBossButton wired
+**T8 Completion**
+- Combat (placeholder): drag swamp_enemy to HeroPanel triggers simple turn-based damage, HP decreases, win grants XP
+- Equipment: drag wood_spear to HeroPanel, ATK +1, card removed
+- Trash: drag card to TrashZone, XP +1, card removed
+- UI: HP/ATK/DEF/XP labels update live
+- Stability: removed cards also removed from Board.occupancy
 **T6 Completion**
 - MergeRule data-driven, order-insensitive matching
 - Merge logic: occupied-cell match merges into swamp_enemy

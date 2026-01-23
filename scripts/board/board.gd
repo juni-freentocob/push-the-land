@@ -69,6 +69,9 @@ func _remove_card_from_occupancy(card_view: CardView) -> void:
 	if to_remove.x != -1:
 		occupancy.erase(to_remove)
 
+func remove_card(card_view: CardView) -> void:
+	_remove_card_from_occupancy(card_view)
+
 func set_merge_rules(rules: Array[MergeRule]) -> void:
 	merge_rules = []
 	for rule in rules:
