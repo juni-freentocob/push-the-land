@@ -18,3 +18,35 @@ offset_left = -40.0
 offset_bottom = 40.0
 grow_horizontal = 0
 mouse_filter = 2
+
+[node name="NameLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -40.0
+offset_bottom = 23.0
+grow_horizontal = 0
+theme_override_colors/font_color = Color(1.0781288e-05, 0.93776095, 0.93776095, 1)
+
+[node name="WeaknessLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -40.0
+offset_top = 40.0
+offset_bottom = 63.0
+grow_horizontal = 0
+theme_override_colors/font_color = Color(0, 0.9372549, 0.9372549, 1)
+
+[node name="SkillsLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -40.0
+offset_top = 80.0
+offset_bottom = 103.0
+grow_horizontal = 0
+theme_override_colors/font_color = Color(0, 0.9372549, 0.9372549, 1)

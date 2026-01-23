@@ -16,12 +16,15 @@ extends Node
 @onready var overflow_area: Control = get_node_or_null("UI/OverflowArea") as Control
 @onready var seed_label: Label = _find_label("SeedLabel")
 @onready var spawn_label: Label = _find_label("SpawnLabel")
+@onready var debug_boss_button: Button = _find_button("DebugBossButton")
 
 const CARD_VIEW_SCENE: PackedScene = preload("res://scenes/cards/CardView.tscn")
 
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var spawned_count: int = 0
 var active_seed: int = 0
+var boss_spawned: bool = false
+var boss_defeated: bool = false
 
 func _ready() -> void:
 	if theme == null:
@@ -30,12 +33,19 @@ func _ready() -> void:
 	var hud := get_node_or_null("UI/DebugHUD") as Control
 	if hud != null:
 		hud.z_index = 100
+	theme_choice.z_index = 200
 	_load_merge_rules()
 	board.set_merge_rules(merge_rules)
 	board.merge_happened.connect(_on_board_merge_happened)
+	theme_choice.theme_chosen.connect(_on_theme_chosen)
+	if debug_boss_button == null:
+		push_error("[Main] DebugBossButton not found. Check UI/DebugHUD/DebugBox/DebugBossButton.")
+	else:
+		debug_boss_button.pressed.connect(debug_defeat_boss)
 	_setup_seed()
 	_update_debug_hud()
 	_spawn_initial_cards()
+	_show_boss_preview()
 
 func _setup_seed() -> void:
 	if use_fixed_seed:
@@ -60,6 +70,17 @@ func _spawn_initial_cards() -> void:
 	for _i in range(total_spawn):
 		_spawn_one()
 	_update_debug_hud()
+	_try_spawn_boss()
+
+func _try_spawn_boss() -> void:
+	if boss_spawned:
+		return
+	if spawned_count >= total_spawn:
+		boss_spawned = true
+		print("[Main] Boss spawned (placeholder).")
+
+func _show_boss_preview() -> void:
+	boss_preview.show_boss("Swamp King", "Fire", PackedStringArray(["Toxic Breath", "Vine Grasp"]))
 
 func _spawn_one() -> void:
 	var card_id := _pick_weighted_id(theme.deck_weights)
@@ -124,6 +145,16 @@ func _find_label(label_name: String) -> Label:
 			node = hud.find_child(label_name, true, false)
 	return node as Label
 
+func _find_button(button_name: String) -> Button:
+	var node := get_node_or_null("UI/DebugHUD/DebugBox/%s" % button_name)
+	if node == null:
+		node = get_node_or_null("UI/DebugHUD/%s" % button_name)
+	if node == null:
+		var hud := get_node_or_null("UI/DebugHUD")
+		if hud != null:
+			node = hud.find_child(button_name, true, false)
+	return node as Button
+
 func _on_card_hover_started(card_view: CardView) -> void:
 	board.highlight_mergeable(card_view.def_id, card_view)
 
@@ -148,3 +179,16 @@ func _on_board_merge_happened(_input_a: StringName, _input_b: StringName, output
 	if label != null:
 		label.text = String(output)
 	board.place_card_at_cell(card_view, cell)
+
+func _on_theme_chosen(theme_id: StringName) -> void:
+	print("[Main] Theme chosen:", theme_id)
+	theme_choice.hide_choices()
+
+func debug_defeat_boss() -> void:
+	boss_spawned = true
+	if boss_defeated:
+		return
+	boss_defeated = true
+	boss_preview.hide_boss()
+	theme_choice.show_choices("Theme A", "Theme B", "Theme C")
+	print("[Main] Debug defeat boss triggered.")

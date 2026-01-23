@@ -84,3 +84,10 @@ Responsibilities:
 - Show 3 theme options
 Signals:
 - theme_chosen(theme_id)
+
+UI path notes:
+- UI/ThemeChoice/VBoxContainer/BoxA
+- UI/ThemeChoice/VBoxContainer/BoxB
+- UI/ThemeChoice/VBoxContainer/BoxC
+- UI/DebugHUD/DebugBossButton (debug only)
+- ThemeChoice uses high z_index to stay above cards

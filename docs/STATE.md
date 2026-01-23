@@ -30,6 +30,13 @@ T6 (Merge + Hover + Overflow)
 - Hover highlight stable during drag; dragged card not highlighted
 - OverflowArea holds cards beyond 9x9, avoids UI blocking
 
+T7 (BossPreview + ThemeChoice)
+- BossPreview shows name/weakness/skills (placeholder)
+- Boss spawn placeholder after 100 cards
+- DebugBossButton triggers boss defeat and ThemeChoice
+- ThemeChoice selection hides UI
+- Boss spawn is a state event only; real combat in T8
+
 ## Key Decisions
 - Manual drag/drop only (no Control drag/drop APIs)
 - Drop priority: TrashZone > HeroPanel > Board

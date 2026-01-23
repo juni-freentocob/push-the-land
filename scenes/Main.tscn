@@ -80,6 +80,10 @@ theme_override_colors/font_color = Color(0, 0, 0, 1)
 layout_mode = 2
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 
+[node name="DebugBossButton" type="Button" parent="UI/DebugHUD/DebugBox"]
+layout_mode = 2
+text = "Defeat Boss (Debug)"
+
 [node name="OverflowArea" type="Control" parent="UI"]
 layout_mode = 3
 anchors_preset = 2
