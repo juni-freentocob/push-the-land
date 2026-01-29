@@ -71,7 +71,7 @@ T8 (MVP combat + rewards)
 
 ## M1.1 Status
 - T9: Boss real loop (no DebugBossButton dependency) — DONE
-- T10: Spirit + terrain -> enemy as main path — TODO
+- T10: Spirit + terrain -> enemy as main path — DONE
 - T11: Drop + growth loop to make boss winnable — TODO
 - T12: ThemeChoice leads to a real new round — TODO
 - T13: Docs + verification updates — TODO
@@ -79,6 +79,7 @@ T8 (MVP combat + rewards)
 ## Recent Decisions (M1.1)
 - Boss no longer depends on DebugBossButton; ChallengeBossButton drives combat.
 - ThemeChoice locks card drag until a choice is made.
+- Main path (spirit + complete terrain) is enabled; MergeRule spirit+mud stays for now.
 
 ## Verification Checklist (Current)
 - Drag card to HeroPanel: prints accept_drop log

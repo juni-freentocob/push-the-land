@@ -42,6 +42,7 @@ func _ready() -> void:
 	_load_merge_rules()
 	board.set_merge_rules(merge_rules)
 	board.merge_happened.connect(_on_board_merge_happened)
+	board.spirit_terrain_happened.connect(_on_board_spirit_terrain_happened)
 	theme_choice.theme_chosen.connect(_on_theme_chosen)
 	hero_panel.equip_requested.connect(_on_equip_requested)
 	hero_panel.combat_requested.connect(_on_combat_requested)
@@ -112,7 +113,7 @@ func _spawn_one() -> void:
 	card_view.hover_ended.connect(_on_card_hover_ended)
 	var label := card_view.get_node_or_null("Label") as Label
 	if label != null:
-		label.text = String(card_id)
+		label.text = _get_card_display_name(card_id)
 	_place_spawned_card(card_view, spawned_count)
 	spawned_count += 1
 
@@ -196,8 +197,33 @@ func _on_board_merge_happened(_input_a: StringName, _input_b: StringName, output
 	card_view.hover_ended.connect(_on_card_hover_ended)
 	var label := card_view.get_node_or_null("Label") as Label
 	if label != null:
-		label.text = String(output)
+		label.text = _get_card_display_name(output)
 	board.place_card_at_cell(card_view, cell)
+
+func _on_board_spirit_terrain_happened(_spirit_id: StringName, _terrain_id: StringName, output: StringName, cell: Vector2i) -> void:
+	var card_view := CARD_VIEW_SCENE.instantiate() as CardView
+	card_layer.add_child(card_view)
+	card_view.def_id = output
+	card_view.drag_started.connect(_on_card_drag_started)
+	card_view.drag_ended.connect(_on_card_drag_ended)
+	card_view.hover_started.connect(_on_card_hover_started)
+	card_view.hover_ended.connect(_on_card_hover_ended)
+	var label := card_view.get_node_or_null("Label") as Label
+	if label != null:
+		label.text = _get_card_display_name(output)
+	board.place_card_at_cell(card_view, cell)
+
+func _get_card_display_name(card_id: StringName) -> String:
+	var path := "res://data/cards/%s.tres" % String(card_id)
+	var res := load(path)
+	if res == null:
+		return String(card_id)
+	var def := res as CardDef
+	if def == null:
+		return String(card_id)
+	if def.display_name.is_empty():
+		return String(card_id)
+	return def.display_name
 
 func _on_theme_chosen(theme_id: StringName) -> void:
 	print("[Main] Theme chosen:", theme_id)

@@ -3,6 +3,7 @@ extends Control
 
 signal board_cell_dropped(card_view: Node, cell: Vector2i)
 signal merge_happened(input_a: StringName, input_b: StringName, output: StringName, cell: Vector2i)
+signal spirit_terrain_happened(spirit_id: StringName, terrain_id: StringName, output: StringName, cell: Vector2i)
 
 @export var board_size: int = 9
 @export var cell_size: int = 64
@@ -14,6 +15,7 @@ var occupancy: Dictionary[Vector2i, CardView] = {}
 var merge_rules: Array[MergeRule] = []
 var _hover_def_id: StringName = &""
 var _hover_locked: bool = false
+var _card_def_cache: Dictionary[StringName, CardDef] = {}
 
 func _ready() -> void:
 	pass
@@ -34,6 +36,12 @@ func accept_drop(card_view: CardView) -> bool:
 		return false
 	var existing: CardView = occupancy.get(cell) as CardView
 	if existing != null and existing != card_view:
+		var existing_def := _get_card_def(existing.def_id)
+		var incoming_def := _get_card_def(card_view.def_id)
+		if _is_complete_terrain(existing_def) and _is_spirit(incoming_def):
+			return _resolve_spirit_terrain(existing, card_view, existing.def_id, card_view.def_id, cell)
+		if _is_complete_terrain(incoming_def) and _is_spirit(existing_def):
+			return _resolve_spirit_terrain(existing, card_view, existing.def_id, card_view.def_id, cell)
 		var rule := _find_merge_rule(card_view.def_id, existing.def_id)
 		if rule != null:
 			return _resolve_merge(existing, card_view, rule, cell)
@@ -91,7 +99,7 @@ func highlight_mergeable(def_id: StringName, exclude: CardView = null) -> void:
 		if exclude != null and other == exclude:
 			other.set_highlighted(false)
 			continue
-		var can_merge := _find_merge_rule(def_id, other.def_id) != null
+		var can_merge := _can_trigger_interaction(def_id, other.def_id)
 		other.set_highlighted(can_merge)
 
 func clear_highlights() -> void:
@@ -118,6 +126,15 @@ func _find_merge_rule(id_a: StringName, id_b: StringName) -> MergeRule:
 			return rule
 	return null
 
+func _can_trigger_interaction(id_a: StringName, id_b: StringName) -> bool:
+	if _find_merge_rule(id_a, id_b) != null:
+		return true
+	var def_a := _get_card_def(id_a)
+	var def_b := _get_card_def(id_b)
+	if def_a == null or def_b == null:
+		return false
+	return (_is_complete_terrain(def_a) and _is_spirit(def_b)) or (_is_complete_terrain(def_b) and _is_spirit(def_a))
+
 func _rule_matches(rule: MergeRule, id_a: StringName, id_b: StringName) -> bool:
 	if rule.inputs.size() != 2:
 		return false
@@ -136,6 +153,38 @@ func _resolve_merge(existing: CardView, incoming: CardView, rule: MergeRule, cel
 	incoming.queue_free()
 	merge_happened.emit(existing.def_id, incoming.def_id, rule.output, cell)
 	return true
+
+func _resolve_spirit_terrain(existing: CardView, incoming: CardView, existing_id: StringName, incoming_id: StringName, cell: Vector2i) -> bool:
+	_remove_card_from_occupancy(existing)
+	_remove_card_from_occupancy(incoming)
+	existing.queue_free()
+	incoming.queue_free()
+	spirit_terrain_happened.emit(existing_id, incoming_id, &"swamp_enemy", cell)
+	return true
+
+func _get_card_def(card_id: StringName) -> CardDef:
+	if card_id == &"":
+		return null
+	if _card_def_cache.has(card_id):
+		return _card_def_cache[card_id]
+	var path := "res://data/cards/%s.tres" % String(card_id)
+	var res := load(path)
+	var def := res as CardDef
+	if def != null:
+		_card_def_cache[card_id] = def
+	return def
+
+func _is_complete_terrain(def: CardDef) -> bool:
+	if def == null:
+		return false
+	if def.kind != CardDef.CardKind.TERRAIN_PART:
+		return false
+	return bool(def.stats.get("complete_terrain", false))
+
+func _is_spirit(def: CardDef) -> bool:
+	if def == null:
+		return false
+	return def.kind == CardDef.CardKind.SPIRIT
 
 func _update_hover_highlight() -> void:
 	var mouse_pos := get_viewport().get_mouse_position()

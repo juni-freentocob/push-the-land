@@ -9,6 +9,7 @@ display_name = "Swamp"
 deck_weights = {
 "swamp_mud": 30,
 "swamp_spirit": 50,
+"swamp_terrain_complete": 10,
 "wood_spear": 20
 }
 boss_id = &"swamp_boss"

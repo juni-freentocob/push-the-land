@@ -135,7 +135,7 @@
 - Close remaining loop gaps for boss flow, spirit+terrain main path, drops/growth, and real theme switch.
 **Deliverables**
 - T9: Boss real loop (no DebugBossButton dependency) – DONE
-- T10: Spirit + terrain -> enemy as main path – TODO
+- T10: Spirit + terrain -> enemy as main path – DONE
 - T11: Drop + growth loop to make boss winnable – TODO
 - T12: ThemeChoice leads to a real new round – TODO
 - T13: Docs + verification updates – TODO
@@ -145,6 +145,10 @@
 - BossHP reaches 0 -> ThemeChoice auto shows and stays above cards
 - ThemeChoice locks card drag; interaction resumes after selection
 - BossPreview hides after victory (0/Max visible before choice)
+**T10 Completion**
+- Drag swamp_spirit onto complete swamp terrain spawns swamp_enemy (main path)
+- Hover highlight shows spirit + complete terrain trigger
+- spirit + swamp_mud still generates swamp_enemy via MergeRule (intended coexistence)
 
 ### M2 — Theme branching (3 boxes) + multiple themes (City / Swamp / Sanctuary)
 **Scope**

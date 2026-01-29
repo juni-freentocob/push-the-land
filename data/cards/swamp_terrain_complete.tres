@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="CardDef" load_steps=2 format=3 uid="uid://bu20cx6sw2fos"]
+
+[ext_resource type="Script" uid="uid://bh4ielkgicvpi" path="res://scripts/data/card_def.gd" id="1_6w443"]
+
+[resource]
+script = ExtResource("1_6w443")
+id = &"swamp_terrain_complete"
+display_name = "swamp_terrain"
+terrain_part = &"swamp"
+kind = 0
+theme_tags = PackedStringArray("swamp")
+stats = {
+"complete_terrain": true
+}
+terrain_part = &"swamp"
+kind = 0
+theme_tags = PackedStringArray("swamp")
+stats = {
+"complete_terrain": true
+}
+metadata/_custom_type_script = "uid://bh4ielkgicvpi"

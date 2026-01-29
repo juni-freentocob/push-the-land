@@ -35,6 +35,10 @@ Fields:
 Notes:
 - inputs are order-insensitive
 - swamp_enemy is MVP merge output placeholder (T7/T8 will map to real EnemyDef/combat)
+Interaction rules:
+- Main path: SPIRIT + complete TERRAIN -> ENEMY
+- Component merge: apply MergeRule (order-insensitive) for specific recipes
+- If both could apply, main path takes priority over MergeRule
 
 ## 3) TerrainDef (res://data/terrains/TerrainDef.gd)
 Defines a complete terrain type.
@@ -45,6 +49,8 @@ Fields:
 - theme_tags: PackedStringArray
 - passive_effect_id: StringName (optional)
 - enemy_table_id: StringName (maps spirit->enemy)
+Notes:
+- Complete terrain can be flagged via CardDef.stats["complete_terrain"]=true
 
 ## 4) SpiritDef (optional separate; or encode on CardDef kind=SPIRIT)
 If separate:
