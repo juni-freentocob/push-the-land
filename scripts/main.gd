@@ -6,6 +6,8 @@ extends Node
 @export var fixed_seed: int = 12345
 @export var merge_rules: Array[MergeRule] = []
 @export var merge_rules_path: String = "res://data/merge/swamp_rules.tres"
+@export var drop_pool: PackedStringArray = PackedStringArray(["wood_spear", "swamp_spirit", "swamp_mud"])
+@export var enemy_xp_reward: int = 3
 
 @onready var board: Board = $Board
 @onready var hero_panel: HeroPanel = $UI/HeroPanel
@@ -28,6 +30,7 @@ var boss_spawned: bool = false
 var boss_defeated: bool = false
 var boss_hp_max: int = 12
 var boss_hp_current: int = 0
+var drop_count: int = 0
 
 func _ready() -> void:
 	if theme == null:
@@ -292,7 +295,9 @@ func _on_combat_requested(card_view: CardView) -> void:
 		var enemy_dmg: int = max(enemy_atk - hero_panel.get_defense(), 1)
 		hero_hp -= enemy_dmg
 	hero_panel.hp = max(hero_hp, 0)
-	hero_panel.add_xp(2)
+	if enemy_hp <= 0:
+		hero_panel.add_xp(enemy_xp_reward)
+		_spawn_drop_from_pool()
 	_consume_card(card_view)
 
 func _on_delete_requested(card_view: CardView) -> void:
@@ -302,6 +307,25 @@ func _on_delete_requested(card_view: CardView) -> void:
 func _consume_card(card_view: CardView) -> void:
 	board.remove_card(card_view)
 	card_view.queue_free()
+
+func _spawn_drop_from_pool() -> void:
+	if drop_pool.is_empty():
+		return
+	var pick_index: int = rng.randi_range(0, drop_pool.size() - 1)
+	var card_id := StringName(drop_pool[pick_index])
+	var card_view := CARD_VIEW_SCENE.instantiate() as CardView
+	card_layer.add_child(card_view)
+	card_view.def_id = card_id
+	card_view.drag_started.connect(_on_card_drag_started)
+	card_view.drag_ended.connect(_on_card_drag_ended)
+	card_view.hover_started.connect(_on_card_hover_started)
+	card_view.hover_ended.connect(_on_card_hover_ended)
+	var label := card_view.get_node_or_null("Label") as Label
+	if label != null:
+		label.text = _get_card_display_name(card_id)
+	var pile_offset := Vector2((drop_count % 6) * 6, int(drop_count / 6) * 6)
+	_place_in_overflow(card_view, pile_offset)
+	drop_count += 1
 
 func debug_defeat_boss() -> void:
 	boss_spawned = true

@@ -136,7 +136,7 @@
 **Deliverables**
 - T9: Boss real loop (no DebugBossButton dependency) – DONE
 - T10: Spirit + terrain -> enemy as main path – DONE
-- T11: Drop + growth loop to make boss winnable – TODO
+- T11: Drop + growth loop to make boss winnable – DONE
 - T12: ThemeChoice leads to a real new round – TODO
 - T13: Docs + verification updates – TODO
 **T9 Completion**
@@ -149,6 +149,11 @@
 - Drag swamp_spirit onto complete swamp terrain spawns swamp_enemy (main path)
 - Hover highlight shows spirit + complete terrain trigger
 - spirit + swamp_mud still generates swamp_enemy via MergeRule (intended coexistence)
+**T11 Completion**
+- Fixed drop pool: wood_spear / swamp_spirit / swamp_mud
+- Killing swamp_enemy drops 1 card into OverflowArea (stacked)
+- Kill XP = +3 (greater than Trash XP +1)
+- UI + occupancy update correctly
 
 ### M2 — Theme branching (3 boxes) + multiple themes (City / Swamp / Sanctuary)
 **Scope**

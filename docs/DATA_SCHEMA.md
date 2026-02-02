@@ -94,3 +94,15 @@ CardInstance:
 - def_id: StringName
 - instance_id: int
 - state (e.g., placed coords, durability) if needed
+
+## 9) Drop Pool (MVP runtime config)
+Fixed list used for enemy drops (not a Resource yet).
+Structure:
+- drop_pool: PackedStringArray of CardDef ids
+Current pool:
+- wood_spear
+- swamp_spirit
+- swamp_mud
+XP rules (MVP):
+- Trash: +1 XP
+- Kill: +3 XP
