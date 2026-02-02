@@ -85,6 +85,8 @@ Responsibilities:
 - Show 3 theme options
 Signals:
 - theme_chosen(theme_id)
+Notes:
+- Buttons map to theme_id (no hardcoded ids)
 
 UI path notes:
 - UI/BossPreview/ChallengeBossButton

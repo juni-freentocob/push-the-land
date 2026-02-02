@@ -88,6 +88,13 @@ Fields:
 - next_theme_pool: Array[StringName] (optional; controls what appears in 3 boxes)
 Notes:
 - RNG seed config lives in Main export vars (fixed or system-time)
+ThemeChoice mapping:
+- Buttons return theme_id (no hardcoded ids)
+- Theme selection priority: next_theme_pool (if non-empty) else theme_pool (fallback)
+
+## 7.1) Theme pool (runtime)
+Fields:
+- theme_pool: PackedStringArray (fallback theme ids)
 
 ## 8) Runtime instance (not a Resource)
 CardInstance:

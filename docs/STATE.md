@@ -73,7 +73,7 @@ T8 (MVP combat + rewards)
 - T9: Boss real loop (no DebugBossButton dependency) — DONE
 - T10: Spirit + terrain -> enemy as main path — DONE
 - T11: Drop + growth loop to make boss winnable — DONE
-- T12: ThemeChoice leads to a real new round — TODO
+- T12: ThemeChoice leads to a real new round — DONE
 - T13: Docs + verification updates — TODO
 
 ## Recent Decisions (M1.1)
@@ -81,6 +81,7 @@ T8 (MVP combat + rewards)
 - ThemeChoice locks card drag until a choice is made.
 - Main path (spirit + complete terrain) is enabled; MergeRule spirit+mud stays for now.
 - Drops go to OverflowArea by default to avoid board crowding.
+- Theme switch clears board, resets counts, and re-spawns; city_theme added as placeholder.
 
 ## Verification Checklist (Current)
 - Drag card to HeroPanel: prints accept_drop log

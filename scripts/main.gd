@@ -8,6 +8,7 @@ extends Node
 @export var merge_rules_path: String = "res://data/merge/swamp_rules.tres"
 @export var drop_pool: PackedStringArray = PackedStringArray(["wood_spear", "swamp_spirit", "swamp_mud"])
 @export var enemy_xp_reward: int = 3
+@export var theme_pool: PackedStringArray = PackedStringArray(["swamp", "city"])
 
 @onready var board: Board = $Board
 @onready var hero_panel: HeroPanel = $UI/HeroPanel
@@ -234,6 +235,7 @@ func _on_theme_chosen(theme_id: StringName) -> void:
 	_set_card_interaction_enabled(true)
 	if boss_defeated:
 		boss_preview.hide_boss()
+	_apply_theme_by_id(theme_id)
 
 func _set_card_interaction_enabled(enabled: bool) -> void:
 	var cards := get_tree().get_nodes_in_group("card_view")
@@ -272,7 +274,7 @@ func _on_boss_defeated() -> void:
 	boss_preview.set_boss_hp(0, boss_hp_max)
 	_set_boss_button_enabled(false)
 	_set_card_interaction_enabled(false)
-	theme_choice.show_choices("Theme A", "Theme B", "Theme C")
+	_show_theme_choices()
 	print("[Main] Boss defeated.")
 
 func _on_equip_requested(card_view: CardView) -> void:
@@ -335,5 +337,67 @@ func debug_defeat_boss() -> void:
 	boss_preview.hide_boss()
 	_set_boss_button_enabled(false)
 	_set_card_interaction_enabled(false)
-	theme_choice.show_choices("Theme A", "Theme B", "Theme C")
+	_show_theme_choices()
 	print("[Main] Debug defeat boss triggered.")
+
+func _show_theme_choices() -> void:
+	var ids := _get_next_theme_ids()
+	if ids.size() < 3:
+		return
+	var a := _get_theme_display_name(ids[0])
+	var b := _get_theme_display_name(ids[1])
+	var c := _get_theme_display_name(ids[2])
+	theme_choice.show_choices(a, b, c, ids[0], ids[1], ids[2])
+
+func _get_next_theme_ids() -> PackedStringArray:
+	var pool := theme.next_theme_pool if theme != null and not theme.next_theme_pool.is_empty() else theme_pool
+	if pool.is_empty():
+		return PackedStringArray([&"swamp", &"city", &"swamp"])
+	var result: PackedStringArray = PackedStringArray()
+	var i := 0
+	while result.size() < 3 and i < pool.size():
+		result.append(pool[i])
+		i += 1
+	while result.size() < 3:
+		result.append(pool[0])
+	return result
+
+func _get_theme_display_name(theme_id: StringName) -> String:
+	var def := _load_theme_def(theme_id)
+	if def != null and not def.display_name.is_empty():
+		return def.display_name
+	return String(theme_id)
+
+func _load_theme_def(theme_id: StringName) -> ThemeDef:
+	var path := "res://data/themes/%s_theme.tres" % String(theme_id)
+	var res := load(path)
+	return res as ThemeDef
+
+func _apply_theme_by_id(theme_id: StringName) -> void:
+	var new_theme := _load_theme_def(theme_id)
+	if new_theme == null:
+		push_error("[Main] Theme not found: %s" % String(theme_id))
+		return
+	theme = new_theme
+	_reset_run()
+
+func _reset_run() -> void:
+	var cards := get_tree().get_nodes_in_group("card_view")
+	for node in cards:
+		var card := node as CardView
+		if card != null:
+			card.queue_free()
+	board.clear_highlights()
+	board.occupancy.clear()
+	spawned_count = 0
+	drop_count = 0
+	boss_spawned = false
+	boss_defeated = false
+	boss_hp_current = 0
+	_setup_seed()
+	_update_debug_hud()
+	call_deferred("_start_spawn_sequence")
+
+func _start_spawn_sequence() -> void:
+	var timer := get_tree().create_timer(0.1)
+	timer.timeout.connect(_spawn_initial_cards)

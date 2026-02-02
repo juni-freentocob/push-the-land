@@ -137,7 +137,7 @@
 - T9: Boss real loop (no DebugBossButton dependency) – DONE
 - T10: Spirit + terrain -> enemy as main path – DONE
 - T11: Drop + growth loop to make boss winnable – DONE
-- T12: ThemeChoice leads to a real new round – TODO
+- T12: ThemeChoice leads to a real new round – DONE
 - T13: Docs + verification updates – TODO
 **T9 Completion**
 - 100 cards -> BossReady, BossPreview shows boss info + BossHP
@@ -154,6 +154,12 @@
 - Killing swamp_enemy drops 1 card into OverflowArea (stacked)
 - Kill XP = +3 (greater than Trash XP +1)
 - UI + occupancy update correctly
+**T12 Completion**
+- ThemeChoice buttons return real theme_id (no hardcoded ids)
+- Selecting a theme clears Board/OverflowArea, resets spawned/boss state, then re-generates
+- Theme source: theme.next_theme_pool (preferred) or default theme_pool fallback
+- Added city_theme placeholder for switching validation
+- DebugHUD shows 0/100 on reset before spawning begins
 
 ### M2 — Theme branching (3 boxes) + multiple themes (City / Swamp / Sanctuary)
 **Scope**
