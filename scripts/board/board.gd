@@ -155,11 +155,23 @@ func _resolve_merge(existing: CardView, incoming: CardView, rule: MergeRule, cel
 	return true
 
 func _resolve_spirit_terrain(existing: CardView, incoming: CardView, existing_id: StringName, incoming_id: StringName, cell: Vector2i) -> bool:
+	var spirit_id: StringName = &""
+	var terrain_id: StringName = &""
+	var existing_def := _get_card_def(existing_id)
+	var incoming_def := _get_card_def(incoming_id)
+	if _is_spirit(existing_def):
+		spirit_id = existing_id
+	elif _is_spirit(incoming_def):
+		spirit_id = incoming_id
+	if _is_complete_terrain(existing_def):
+		terrain_id = existing_id
+	elif _is_complete_terrain(incoming_def):
+		terrain_id = incoming_id
 	_remove_card_from_occupancy(existing)
 	_remove_card_from_occupancy(incoming)
 	existing.queue_free()
 	incoming.queue_free()
-	spirit_terrain_happened.emit(existing_id, incoming_id, &"swamp_enemy", cell)
+	spirit_terrain_happened.emit(spirit_id, terrain_id, &"swamp_enemy", cell)
 	return true
 
 func _get_card_def(card_id: StringName) -> CardDef:

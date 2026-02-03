@@ -1,0 +1,1636 @@
+﻿[FILE: PLANS.md]
+# PushTheLand 鈥?Execution Plan (Godot 4)
+
+## 0. Project snapshot
+- Engine: Godot 4.x (GDScript 2.0 typed)
+- Core presentation: square grid board (usually 9x9, sometimes smaller; max 9x9)
+- Core loop per level: **spawn 100 themed cards in random order 鈫?Boss appears 鈫?defeat Boss 鈫?choose next theme (3 card boxes)**
+- Key interaction: **drag & drop cards** across board / hero panel / trash zone
+- Strategy layer: boss preview at level start (name, skills, weakness)
+
+## 1. Game pillars
+1) Drag-centric tactile gameplay (fast, readable, low-friction)
+2) Data-driven content (themes/cards/merge rules via Resources; add content without code)
+3) Strategy: boss preview + targeted merges/equipment planning
+4) Replayability: branching theme choice, different playstyles (build/trap/solo)
+
+## 2. Systems breakdown (high level)
+### Board & Placement
+- Grid occupancy model (cell coords -> placed card instance)
+- Visual grid (9x9 default; support NxN <= 9)
+- Hover highlight: show all mergeable partners for the hovered card
+
+### Cards
+- Card types:
+  - Terrain component
+  - Spirit
+  - Equipment (weapon/armor/trinket)
+  - Utility/Item (optional later)
+  - Enemy card (generated result, not in base deck)
+- Drag behaviors:
+  - Drop on board cell: place or attempt merge
+  - Drop on hero panel: equip or trigger combat (enemy)
+  - Drop on trash zone: delete -> small XP
+
+### Merge & Recipes
+- Merge rule engine (data-driven):
+  - card + card -> new card (upgrade / terrain completion / elite spirit)
+  - spirit + spirit -> elite spirit
+  - terrain components -> complete terrain
+- UX: when hover card A, highlight all cards that can merge with A (by rule lookup)
+
+### Hero & Progression
+- Hero exists outside board (UI panel)
+- Stats: HP, ATK, DEF
+- XP sources: kill enemies, trash cards, objectives
+- Level-up: stats grow; unlock talent/passive slots (later)
+
+### Spirits -> Enemies (Dynamic)
+- spirit + complete terrain -> enemy (terrain-specific)
+- elite spirit + complete terrain -> elite enemy (harder, better drops)
+
+### Enemy & Combat (MVP first)
+- Minimal combat for slice: when combat triggers, resolve damage ticks until one side dies
+- Drop + XP reward on victory
+
+### Level & Theme flow
+- Level start: Boss preview UI
+- Spawn 100 cards according to theme deck list
+- Boss spawns after 100
+- After boss defeat: ThemeChoice (3 card boxes) -> load next theme
+
+## 3. Milestones
+
+### M0 鈥?Foundation (Project skeleton + docs)
+**Scope**
+- Create core scenes, baseline scripts, Resource schemas, debug utilities.
+**Deliverables**
+- docs/GDD.md, docs/DATA_SCHEMA.md, docs/SCENE_TREE.md (initial)
+- res://scenes/Main.tscn (boot)
+- res://scenes/Board.tscn, res://scenes/ui/HeroPanel.tscn, TrashZone.tscn, BossPreview.tscn, ThemeChoice.tscn
+- Base scripts under res://scripts/...
+**Acceptance**
+- Project runs to Main; board & UI panels visible
+- Debug overlay can show: RNG seed, spawned count, board occupancy count
+**Verification**
+- Run Main scene; confirm UI zones exist and respond to placeholder interactions
+**Risks**
+- Over-engineering early. Mitigation: keep M0 minimal and support M1 only.
+
+### M1 鈥?Vertical Slice (Swamp theme) 鈥?complete 100 cards -> Boss -> Victory -> ThemeChoice (T3 DONE, T4 DONE, T5 DONE, T6 DONE, T7 DONE, T8 DONE)
+**Scope**
+- Implement full loop for a single theme (Swamp) with minimal but playable rules.
+**Deliverables**
+- Card spawning system (100 cards random order from theme deck)
+- Drag & drop: board place, hero equip, trash delete (T3 DONE)
+- Merge rules (>= 3 recipes), hover highlight mergeable partners (T4 DONE: data schema + 1 MVP rule)
+- Boss preview (static data)
+- Boss spawn after 100, minimal combat, win condition
+- ThemeChoice UI (3 boxes) placeholder navigation
+**T7 Completion**
+- BossPreview shows name/weakness/skills (placeholder data)
+- Boss spawn placeholder after 100 cards: "Boss spawned (placeholder)"
+- ThemeChoice flow: Debug button triggers boss defeat -> 3 buttons -> selection hides UI
+- UI fixes: ThemeChoice path (VBoxContainer/BoxA|BoxB|BoxC), z_index on top, DebugBossButton wired
+**T8 Completion**
+- Combat (placeholder): drag swamp_enemy to HeroPanel triggers simple turn-based damage, HP decreases, win grants XP
+- Equipment: drag wood_spear to HeroPanel, ATK +1, card removed
+- Trash: drag card to TrashZone, XP +1, card removed
+- UI: HP/ATK/DEF/XP labels update live
+- Stability: removed cards also removed from Board.occupancy
+**T6 Completion**
+- MergeRule data-driven, order-insensitive matching
+- Merge logic: occupied-cell match merges into swamp_enemy
+- Hover: mergeable highlights, drag locks highlight source, dragged card not highlighted
+- Stability: initial occupancy registered, same-card merge fixed, drag z-order on top
+- Overflow: cards beyond 9x9 go to OverflowArea, do not block BossPreview/ThemeChoice
+**T5 Completion**
+- Theme-driven spawn: Main reads ThemeDef.deck_weights, spawns 100 cards by weight
+- Deterministic RNG: fixed seed or system-time seed modes
+- DebugHUD: Seed, Theme, Spawned (overlap fixed)
+- Spawn layout: first board_size*board_size cards placed on grid; extras stacked
+- Stability fixes: DebugHUD null-safe; CardView interactive rect matches visual size
+**Acceptance**
+- Player can finish a run: place/merge/trash/equip; boss appears; defeat boss; reach ThemeChoice
+**Verification**
+- Start run with deterministic seed; confirm boss spawns exactly after 100th card
+- Confirm merge highlight matches rule set
+- Confirm trash gives XP and updates hero UI
+**T3 Completion**
+- Logical grid (board_size/cell_size)
+- Placement + occupancy (snap, same-cell reject, out-of-bounds reject)
+- Repositioning placed cards
+- Drag flow: manual drag + CardLayer dispatch
+- GridVisual debug rendering enabled
+**T4 Completion**
+- Resource scripts: CardDef / ThemeDef / MergeRule (typed GDScript, class_name registered)
+- Swamp data: swamp_spirit (SPIRIT), swamp_mud (TERRAIN_PART), wood_spear (EQUIPMENT with atk_bonus)
+- swamp_theme.tres: deck_weights set, boss_id placeholder
+- swamp_rules.tres: 1 MVP rule (spirit + mud -> swamp_enemy)
+- MissingResource/class_name registration issue resolved (Inspector editable)
+**Risks**
+- Drag UX is fiddly. Mitigation: snapping, clear drop zones, hover preview.
+
+### M1.1 鈥?Swamp VS reinforcement (T9鈥揟13)
+**Scope**
+- Close remaining loop gaps for boss flow, spirit+terrain main path, drops/growth, and real theme switch.
+**Deliverables**
+- T9: Boss real loop (no DebugBossButton dependency) 鈥?DONE
+- T10: Spirit + terrain -> enemy as main path 鈥?DONE
+- T11: Drop + growth loop to make boss winnable 鈥?DONE
+- T12: ThemeChoice leads to a real new round 鈥?DONE
+- T13: Docs + verification updates 鈥?TODO
+**T9 Completion**
+- 100 cards -> BossReady, BossPreview shows boss info + BossHP
+- ChallengeBossButton triggers boss combat (no DebugBossButton required)
+- BossHP reaches 0 -> ThemeChoice auto shows and stays above cards
+- ThemeChoice locks card drag; interaction resumes after selection
+- BossPreview hides after victory (0/Max visible before choice)
+**T10 Completion**
+- Drag swamp_spirit onto complete swamp terrain spawns swamp_enemy (main path)
+- Hover highlight shows spirit + complete terrain trigger
+- spirit + swamp_mud still generates swamp_enemy via MergeRule (intended coexistence)
+**T11 Completion**
+- Fixed drop pool: wood_spear / swamp_spirit / swamp_mud
+- Killing swamp_enemy drops 1 card into OverflowArea (stacked)
+- Kill XP = +3 (greater than Trash XP +1)
+- UI + occupancy update correctly
+**T12 Completion**
+- ThemeChoice buttons return real theme_id (no hardcoded ids)
+- Selecting a theme clears Board/OverflowArea, resets spawned/boss state, then re-generates
+- Theme source: theme.next_theme_pool (preferred) or default theme_pool fallback
+- Added city_theme placeholder for switching validation
+- DebugHUD shows 0/100 on reset before spawning begins
+
+### M2 鈥?Theme branching (3 boxes) + multiple themes (City / Swamp / Sanctuary)
+**Scope**
+- Real theme switching and deck definition per theme.
+**Deliverables**
+- ThemeDef Resources for 3 themes
+- ThemeChoice loads next level with selected theme
+- Theme-bound visuals (background/card frame) minimal
+**Acceptance**
+- Completing a level leads to 3 choices; each loads different theme with different deck mix
+
+### M3 鈥?Spirits + Terrain => Enemy; Spirit + Spirit => Elite Spirit
+**Scope**
+- Replace placeholder enemy generation with the designed dynamic system.
+**Deliverables**
+- Complete terrain state recognition from components
+- Spirit->Enemy conversion rules per terrain
+- Elite spirit + terrain -> elite enemy
+**Acceptance**
+- Player can intentionally create enemies via spirit + terrain, and gain rewards
+
+### M4 鈥?Hero progression + objectives
+**Scope**
+- XP/level system, simple objectives.
+**Deliverables**
+- XP curve, leveling, stats growth, objective definitions
+**Acceptance**
+- Player can level within a run; stats meaningfully affect combat
+
+### M5 鈥?Playstyle enablers (Build / Trap / Solo) 鈥?1 representative mechanic each
+**Scope**
+- Make three approaches viable.
+**Deliverables**
+- City: defensive building or aura (tower / buff)
+- Trap: poison/floor spike
+- Solo: equipment rarity + simple affixes
+**Acceptance**
+- Each playstyle can beat boss with different strategy
+
+### M6 鈥?Content pipeline + polish
+- Save/progression, balancing, FX/SFX, performance, content authoring docs
+
+## 4. Backlog (nice-to-have)
+- Replay system (record input + seed)
+- Tutorials / hinting
+- Accessibility options (snap strength, colorblind highlights)
+- More bosses and theme-specific mechanics
+
+## 5. Decisions log
+- 2026-01-20: Default branch is master; remote uses SSH for GitHub push stability.
+- 2026-01-20: Use manual drag (CardView _gui_input/_process) + CardLayer hit dispatch; avoid Control drag/drop due to CanvasLayer/mouse filter/hit issues blocking drop targets.
+- 2026-01-20: Drop hit-testing uses visible ColorRect areas (HeroPanel/TrashZone) to avoid root Control size mismatches; dispatch priority is TrashZone > HeroPanel > Board via accept_drop/can_accept_drop.
+- 2026-01-20: Placement snap is center-to-center (card center aligns to cell center).
+- 2026-01-20: GridVisual is debug-only visualization; future art can replace without changing logic.
+- 2026-01-20: T4 resources and .tres data landed; boss_id and swamp_enemy are placeholders for T7/T8.
+- 2026-01-20: RNG supports fixed seed or system-time seed for reproducible spawns (configured in Main export vars).
+
+## 6. Debug/Test strategy
+- Deterministic RNG seed toggle
+- Debug HUD: spawned count, boss state, board occupancy, current theme
+- Event log: spawn, place, merge, delete, combat start/end
+
+[FILE: docs/STATE.md]
+# PushTheLand 鈥?State Snapshot
+
+## Index
+- M1.1 测试计划 -> docs/TEST_PLAN_M1_1.md
+
+
+## Current Status (T1鈥揟8)
+T1 (Project skeleton)
+- Main/Board/UI scenes in place
+- Scripts wired with basic logging and signals
+
+T2 (Drag & drop baseline)
+- Manual drag (CardView _gui_input/_process) implemented
+- CardLayer dispatches drop by hit-testing UI ColorRect areas
+- Targets implement accept_drop(card_view) and optional can_accept_drop(card_view)
+
+T3 (Board placement + GridVisual)
+- Logical grid: board_size/cell_size
+- Placement + occupancy: snap, same-cell reject, out-of-bounds reject
+- Repositioning placed cards supported
+- Drag flow unchanged (manual drag + CardLayer dispatch)
+- GridVisual debug rendering (border, grid lines, hover cell)
+
+T4 (Resources + Swamp data)
+- Resource scripts: CardDef / ThemeDef / MergeRule (typed + class_name)
+- Swamp data: swamp_spirit (SPIRIT), swamp_mud (TERRAIN_PART), wood_spear (EQUIPMENT with atk_bonus)
+- swamp_theme.tres: deck_weights set; boss_id placeholder
+- swamp_rules.tres: 1 MVP rule (spirit + mud -> swamp_enemy)
+- MissingResource/class_name issues resolved (Inspector editable)
+
+T5 (Spawner + RNG + DebugHUD)
+- Theme-driven spawn (ThemeDef.deck_weights)
+- Deterministic RNG (fixed seed or system time)
+- DebugHUD shows seed/theme/spawned count
+- Spawn layout: first grid cells; extras stacked in OverflowArea
+
+T6 (Merge + Hover + Overflow)
+- MergeRule data-driven; order-insensitive match
+- Merge generates swamp_enemy MVP output
+- Hover highlight stable during drag; dragged card not highlighted
+- OverflowArea holds cards beyond 9x9, avoids UI blocking
+
+T7 (BossPreview + ThemeChoice)
+- BossPreview shows name/weakness/skills (placeholder)
+- Boss spawn placeholder after 100 cards
+- DebugBossButton triggers boss defeat and ThemeChoice
+- ThemeChoice selection hides UI
+- Boss spawn is a state event only; combat remains placeholder
+
+T8 (MVP combat + rewards)
+- Trash rewards: drop card in TrashZone -> XP +1
+- Equipment: drop wood_spear in HeroPanel -> ATK +1
+- Combat: drop swamp_enemy in HeroPanel -> HP down, XP +2
+- UI stats (HP/ATK/DEF/XP) update live
+
+## Key Decisions
+- Manual drag/drop only (no Control drag/drop APIs)
+- Drop priority: TrashZone > HeroPanel > Board
+- Placement snap: center-to-center (card center to cell center)
+- GridVisual is debug-only; visuals can be replaced without changing logic
+- T4 resources and .tres data are in place; boss_id and swamp_enemy are placeholders
+- RNG is configurable via Main export vars (fixed seed or system time)
+
+## Current Implementation Notes
+- Board placement uses occupancy map keyed by Vector2i cells
+- CardView can be reparented to Board/OccupancyLayer and remain draggable
+- CardLayer hit-tests ColorRect bounds for UI drops
+
+## Next Steps (Planned)
+- M2: Theme branching (3 boxes) + multiple themes
+
+## M1.1 Status
+- T9: Boss real loop (no DebugBossButton dependency) — DONE
+- T10: Spirit + terrain -> enemy as main path — DONE
+- T11: Drop + growth loop to make boss winnable — DONE
+- T12: ThemeChoice leads to a real new round — DONE
+- T13: Docs + verification updates — TODO
+
+## Recent Decisions (M1.1)
+- Boss no longer depends on DebugBossButton; ChallengeBossButton drives combat.
+- ThemeChoice locks card drag until a choice is made.
+- Main path (spirit + complete terrain) is enabled; MergeRule spirit+mud stays for now.
+- Drops go to OverflowArea by default to avoid board crowding.
+- Theme switch clears board, resets counts, and re-spawns; city_theme added as placeholder.
+
+## Verification Checklist (Current)
+- Drag card to HeroPanel: prints accept_drop log
+- Drag card to TrashZone: prints accept_drop log
+- Drag card to Board: snaps to grid center
+- Drag card to occupied cell: rejected and returns to original
+- GridVisual visible: border, grid lines, hover cell
+
+[FILE: docs/DATA_SCHEMA.md]
+# Data Schema (Godot 4 Resources)
+
+## 1) CardDef (res://data/cards/CardDef.gd)
+Represents a card type (not an instance).
+Fields (suggested):
+- id: StringName (unique)
+- display_name: String
+- kind: enum { TERRAIN_PART, SPIRIT, EQUIPMENT, JUNK, GENERATED_ENEMY }
+- rarity: enum { COMMON, UNCOMMON, RARE, EPIC, LEGENDARY } (optional for MVP)
+- icon: Texture2D (optional early)
+- theme_tags: PackedStringArray (e.g., ["swamp"])
+- stackable: bool (usually false)
+- equipment_slot: enum { NONE, WEAPON, ARMOR, TRINKET } (only for EQUIPMENT)
+- stats: Dictionary or dedicated Resource (e.g., atk_bonus, def_bonus, hp_bonus)
+- terrain_part: TerrainPartRef? (links to terrain assembly; only for TERRAIN_PART)
+- spirit_tier: enum { NORMAL, ELITE } (only for SPIRIT)
+CardKind values:
+- TERRAIN_PART
+- SPIRIT
+- EQUIPMENT
+- JUNK
+- GENERATED_ENEMY
+Notes:
+- atk_bonus lives in stats for EQUIPMENT (e.g., {"atk_bonus": 1})
+
+## 2) MergeRule (res://data/merge/MergeRule.gd)
+A single recipe rule.
+Fields:
+- id: StringName
+- inputs: Array[StringName]  (2 card ids; order-insensitive)
+- output: StringName         (card id)
+- consume_inputs: bool = true
+- output_count: int = 1
+- notes: String
+Notes:
+- inputs are order-insensitive
+- swamp_enemy is MVP merge output placeholder (T7/T8 will map to real EnemyDef/combat)
+Interaction rules:
+- Main path: SPIRIT + complete TERRAIN -> ENEMY
+- Component merge: apply MergeRule (order-insensitive) for specific recipes
+- If both could apply, main path takes priority over MergeRule
+
+## 3) TerrainDef (res://data/terrains/TerrainDef.gd)
+Defines a complete terrain type.
+Fields:
+- id: StringName
+- display_name: String
+- required_parts: Array[StringName] (card ids for components)
+- theme_tags: PackedStringArray
+- passive_effect_id: StringName (optional)
+- enemy_table_id: StringName (maps spirit->enemy)
+Notes:
+- Complete terrain can be flagged via CardDef.stats["complete_terrain"]=true
+
+## 4) SpiritDef (optional separate; or encode on CardDef kind=SPIRIT)
+If separate:
+- id: StringName
+- tier: NORMAL/ELITE
+- theme_tags
+- base_modifiers (optional)
+
+## 5) EnemyDef (res://data/enemies/EnemyDef.gd)
+Fields:
+- id: StringName
+- display_name: String
+- max_hp: int
+- atk: int
+- def: int
+- weakness: StringName (e.g., "holy", "fire") (for MVP: string)
+- loot_table_id: StringName (optional)
+- xp_reward: int
+
+## 6) BossDef (can reuse EnemyDef with is_boss flag)
+Fields:
+- enemy_id: StringName (EnemyDef)
+- portrait: Texture2D (optional)
+- skills: PackedStringArray (strings for MVP)
+- weakness: StringName
+
+## 7) ThemeDef (res://data/themes/ThemeDef.gd)
+Fields:
+- id: StringName
+- display_name: String
+- deck: Array[StringName] (list of CardDef ids; for MVP we can generate 100 from weights)
+- deck_weights: Dictionary[StringName, int] (card_id -> weight)
+- boss_id: StringName (BossDef or EnemyDef id)
+- visuals: Dictionary (background, card_frame, tint) (optional early)
+- next_theme_pool: Array[StringName] (optional; controls what appears in 3 boxes)
+Notes:
+- RNG seed config lives in Main export vars (fixed or system-time)
+ThemeChoice mapping:
+- Buttons return theme_id (no hardcoded ids)
+- Theme selection priority: next_theme_pool (if non-empty) else theme_pool (fallback)
+
+## 7.1) Theme pool (runtime)
+Fields:
+- theme_pool: PackedStringArray (fallback theme ids)
+
+## 8) Runtime instance (not a Resource)
+CardInstance:
+- def_id: StringName
+- instance_id: int
+- state (e.g., placed coords, durability) if needed
+
+## 9) Drop Pool (MVP runtime config)
+Fixed list used for enemy drops (not a Resource yet).
+Structure:
+- drop_pool: PackedStringArray of CardDef ids
+Current pool:
+- wood_spear
+- swamp_spirit
+- swamp_mud
+XP rules (MVP):
+- Trash: +1 XP
+- Kill: +3 XP
+
+[FILE: docs/SCENE_TREE.md]
+# Scene Tree & Signals (baseline)
+
+## Main.tscn
+Main (Node)
+- Board (Board)
+- UI (CanvasLayer)
+  - HeroPanel (Control)
+  - TrashZone (Control)
+  - BossPreview (Control)
+  - ThemeChoice (Control) [hidden most of the time]
+  - DebugHUD (Control) [optional]
+
+Responsibilities:
+- Game state machine: RUNNING -> BOSS -> VICTORY -> THEME_CHOICE -> NEXT_LEVEL
+- Own RNG seed and spawn counter
+- Coordinates system: board cell size, mapping screen->cell
+
+Signals (suggested):
+- board_cell_dropped(card_instance, cell: Vector2i)
+- hero_drop(card_instance)
+- trash_drop(card_instance)
+- merge_happened(input_a, input_b, output)
+- combat_started(target_enemy)
+- combat_ended(victory: bool)
+- boss_spawned(boss_id)
+- level_completed
+- theme_chosen(theme_id)
+
+## Board.tscn
+Board (Control or Node2D)
+- GridVisual (Node2D/Control)
+- OccupancyLayer (Node) [holds card views]
+Responsibilities:
+- Convert mouse drop position -> cell coord
+- Maintain occupancy map: Dictionary[Vector2i, CardView]
+- Provide query for highlight: get_mergeable_partners(card_def_id) -> Array[CardView]
+
+## CardLayer (in Main.tscn UI)
+Responsibilities:
+- Receives drag release and dispatches to TrashZone > HeroPanel > Board
+- Hit-tests visible ColorRect areas for UI drops
+
+## CardView.tscn
+CardView (Control)
+- TextureRect / Label for name
+- (optional) highlight overlay
+Responsibilities:
+- Drag source
+- Holds ref to CardDef id
+Signals:
+- drag_started(card_view)
+- drag_ended(card_view, drop_target_type, drop_data)
+
+## HeroPanel.tscn
+HeroPanel (Control)
+- Portrait
+- Stats labels
+- Equipment slots (weapon/armor/trinket)
+Responsibilities:
+- Accept drops
+- Apply equipment bonuses
+Signals:
+- equip_requested(card_view)
+- combat_requested(enemy_card_view)
+
+## TrashZone.tscn
+TrashZone (Control)
+Responsibilities:
+- Accept drops
+- Emit delete_requested
+Signals:
+- delete_requested(card_view)
+
+## BossPreview.tscn
+BossPreview (Control)
+- Portrait / Name / Skills / Weakness
+- ChallengeBossButton (Button)
+Responsibilities:
+- Display boss data at level start
+
+## ThemeChoice.tscn
+ThemeChoice (Control)
+- 3 Buttons (BoxA/BoxB/BoxC)
+Responsibilities:
+- Show 3 theme options
+Signals:
+- theme_chosen(theme_id)
+Notes:
+- Buttons map to theme_id (no hardcoded ids)
+
+UI path notes:
+- UI/BossPreview/ChallengeBossButton
+- UI/ThemeChoice/VBoxContainer/BoxA
+- UI/ThemeChoice/VBoxContainer/BoxB
+- UI/ThemeChoice/VBoxContainer/BoxC
+- UI/DebugHUD/DebugBossButton (debug only)
+- ThemeChoice uses high z_index to stay above cards
+
+[FILE: docs/TEST_PLAN_M1_1.md]
+# M1.1 娴嬭瘯璁″垝锛圗2E + 鍏抽敭瀛愮郴缁燂級
+
+鏈枃浠剁敤浜庨獙璇?M1.1锛圫wamp Vertical Slice 琛ュ己锛夊湪銆屽浐瀹氱瀛愬彲澶嶇幇銆嶅墠鎻愪笅鍙窇閫氬畬鏁翠竴灞€锛屽苟淇濊瘉鏍稿績浜や簰涓€鑷达細
+- 鎵嬪姩鎷栨嫿锛欳ardView 鐪熺Щ鍔?+ CardLayer 鍛戒腑鍒嗗彂锛堜笉浣跨敤 Godot 鍐呯疆 drag/drop API锛?- Board锛?x9 缃戞牸銆佷腑蹇冨榻愬惛闄勩€佸崰鐢ㄨ〃涓€鑷?- OverflowArea锛氬绾宠秴鍑?81 鏍肩殑鍗★紝涓嶉伄鎸?UI锛屼粛鍙嫋鎷芥姇鏀?- 鍚堟垚锛歁ergeRule 鏁版嵁椹卞姩銆侀『搴忔棤鍏冲尮閰嶃€侀珮浜彁绀虹ǔ瀹?- Boss锛?00 寮犲悗杩涘叆 Boss 闃舵锛屽彲琚嚮璐ワ紝鑳滃埄鍚?ThemeChoice 杩涘叆涓嬩竴灞€
+- 鍏绘垚锛歑P/瑁呭/绛夌骇锛堟垨灞炴€у闀匡級瓒充互鏀拺鍑昏触 Boss锛堝彲鎺с€佸彲楠岃瘉锛?
+---
+
+## 绾﹀畾涓庨€氱敤鍓嶇疆
+
+- 妫嬬洏澶у皬锛歜oard_size=9锛宑ell_size=64锛堟垨褰撳墠瀹炵幇鍊硷級
+- 鍗曞眬鎶曟斁鎬绘暟锛?00 寮?- 鍙鐜帮細DebugHUD 鏄剧ず seed/theme/spawned锛屽苟鏀寔鍥哄畾 seed锛堣嫢鏀寔杈撳叆/鍒囨崲锛?- UI 蹇呴』鍙涓斾笉閬尅锛欱ossPreview / ThemeChoice / DebugHUD
+
+---
+
+## T00 鍚姩涓庡鐜帮紙Baseline锛?
+**鍓嶇疆鏉′欢**
+- 宸ョ▼鍙繍琛?Main.tscn
+- DebugHUD 宸叉樉绀?Seed銆乀heme銆丼pawned锛堟垨绛変环淇℃伅锛?- 鍙缃浐瀹?seed锛堟垨杩愯鍚?HUD 鍙锛?
+**鎿嶄綔姝ラ**
+1. 璁剧疆鍥哄畾 seed锛堟垨璁板綍 HUD 鏄剧ず seed锛?2. 杩愯 Main.tscn
+3. 瑙傚療鍚姩鏃ュ織涓?UI 甯冨眬
+
+**棰勬湡缁撴灉**
+- 鏃犳姤閿?鏃犵孩瀛楀紓甯?- HUD 鏄剧ず seed/theme/spawned锛坰pawned 鍒濆涓?0锛?- Board 缃戞牸鍙锛圙ridVisual 姝ｅ父锛?- BossPreview 鍙锛堝崰浣嶄俊鎭彲鏄剧ず锛夛紝ThemeChoice 榛樿闅愯棌
+- 鍗＄墝鍙€変腑涓斾氦浜掔煩褰笌瑙嗚涓€鑷达紙閬垮厤璇€夛級
+
+---
+
+## T01 鎶曟斁 100 寮犱笌 OverflowArea 琛屼负
+
+**鍓嶇疆鏉′欢**
+- ThemeDef.deck_weights 宸查厤缃紙鍙敓鎴愬崱鐗岋級
+- OverflowArea 宸插瓨鍦ㄥ苟鍙杈圭晫锛堣皟璇曞簳鑹插彲閫夛級
+
+**鎿嶄綔姝ラ**
+1. 寮€濮嬬敓鎴愬崱鐗岀洿鑷?spawned=100
+2. 瑙傚療妫嬬洏涓?OverflowArea 鐨勫崱鐗屽垎甯?
+**棰勬湡缁撴灉**
+- Board 鏈€澶氬绾?81 寮狅紙9x9锛夛紝鍓╀綑鍗¤繘鍏?OverflowArea锛堝簲涓?19 寮狅級
+- OverflowArea 鍗＄墝鎺掑垪鏁撮綈锛屼笉閬尅 BossPreview/ThemeChoice/DebugHUD
+- spawned 璁℃暟鍑嗙‘鍒?100
+- 鐢熸垚瀹屾垚鍚庝笉鍐嶇户缁敓鎴?
+---
+
+## T02 Board 鏀剧疆鍚搁檮涓庡崰鐢ㄤ竴鑷存€?
+**鍓嶇疆鏉′欢**
+- Board.accept_drop 宸插疄鐜颁腑蹇冨榻愬惛闄?- occupancy 琛ㄥ凡鍚敤锛圖ictionary[Vector2i, CardView] 鎴栫瓑浠凤級
+
+**鎿嶄綔姝ラ**
+1. 浠?OverflowArea 鎷栦竴寮犲崱鍒版鐩樼┖鏍?2. 鍐嶆嫋鍙︿竴寮犲崱鍒板悓涓€鏍?3. 鎷栧崱鍒版鐩樿竟鐣屽锛堣秺鐣屽尯鍩燂級
+
+**棰勬湡缁撴灉**
+- 绗?1 寮狅細鍗＄墝涓績瀵归綈鏍煎瓙涓績锛屾斁缃垚鍔燂紝occupancy 姝ｇ‘鐧昏
+- 绗?2 寮狅細鍚屾牸鏀剧疆琚嫆缁濓紙鎻愮ず/鏃ュ織鍧囧彲锛夛紝occupancy 涓嶈姹℃煋
+- 瓒婄晫锛氭斁缃鎷掔粷锛堟彁绀?鏃ュ織鍧囧彲锛夛紝鍗″洖鍒板師浣嶇疆鎴栦繚鎸佸彲鎺х姸鎬?
+---
+
+## T03 TrashZone 鍥炴敹濂栧姳涓庡崰鐢ㄦ竻鐞?
+**鍓嶇疆鏉′欢**
+- TrashZone.accept_drop 宸插疄鐜帮紙鎴?CardLayer 鍒嗗彂鍒?TrashZone锛?- Trash 濂栧姳锛歑P +1锛堟垨褰撳墠瀹氫箟锛?
+**鎿嶄綔姝ラ**
+1. 浠庢鐩樻嫋涓€寮犲崱鍒?TrashZone
+2. 浠?OverflowArea 鎷栦竴寮犲崱鍒?TrashZone
+
+**棰勬湡缁撴灉**
+- 涓ょ鏉ユ簮鍧囧彲鍥炴敹锛屽崱浠庡満鏅Щ闄?- XP 澧炲姞锛?1锛?- 鑻ュ崱鏉ヨ嚜妫嬬洏锛歰ccupancy 瀵瑰簲鏍兼竻鐞嗘垚鍔燂紙鏃犺剰鍗犵敤锛?
+---
+
+## T04 瑁呭鍔犳垚涓?UI 鍒锋柊
+
+**鍓嶇疆鏉′欢**
+- wood_spear锛圗QUIPMENT锛夊瓨鍦ㄥ苟鍙鐢熸垚/鑾峰緱
+- HeroPanel.accept_drop 鏀寔瑁呭閫昏緫
+
+**鎿嶄綔姝ラ**
+1. 灏?wood_spear 鎷栧埌 HeroPanel
+2. 瑙傚療 ATK 鍙樺寲涓庤澶囧崱绉婚櫎
+
+**棰勬湡缁撴灉**
+- ATK 澧炲姞锛堜緥濡?+1 鎴?atk_bonus锛?- 瑁呭鍗′粠鍦烘櫙绉婚櫎
+- UI锛圚P/ATK/DEF/XP锛夌珛鍗冲埛鏂?
+---
+
+## T05 鍚堟垚瑙勫垯锛圡ergeRule锛変笌 Hover 楂樹寒绋冲畾
+
+**鍓嶇疆鏉′欢**
+- MergeRule 鍙姞杞斤紙椤哄簭鏃犲叧鍖归厤锛?- 瑙勫垯鑷冲皯鍖呭惈锛歴pirit + mud -> swamp_enemy锛堟垨褰撳墠 MVP 瑙勫垯锛?- CardView 鏈夐珮浜眰涓斾笉閬尅鎷栨嫿鍗?
+**鎿嶄綔姝ラ**
+1. 榧犳爣鎮仠鍦ㄥ彲鍙備笌鍚堟垚鐨勫崱涓?2. 瑙傚療鍙悎鎴愮洰鏍囨槸鍚﹂珮浜?3. 鎷栨嫿 A 鍒?B 鐨勫崰鐢ㄦ牸瑙﹀彂鍚堟垚
+4. 鎷栨嫿杩囩▼涓Щ鍔ㄩ紶鏍囷紝瑙傚療楂樹寒鏄惁鈥滆烦鍙樷€?
+**棰勬湡缁撴灉**
+- 鍙湁鍙悎鎴愮洰鏍囪楂樹寒
+- 鎷栨嫿鏈熼棿楂樹寒鏉ユ簮閿佸畾锛屼笉闅忛紶鏍囪烦鍙?- 鍚堟垚鎴愬姛锛氫袱寮犲崱绉婚櫎锛岀敓鎴?swamp_enemy锛屽苟姝ｇ‘娉ㄥ唽 occupancy
+- 涓嶅彂鐢熲€滃悓鍗¤鍚堟垚鈥?- 鎷栨嫿鍗＄疆椤讹紝涓嶈楂樹寒閬尅
+
+---
+
+## T06 绮鹃瓊 + 鍦板舰 = 鏁屼汉锛圡1.1 涓昏矾寰勯獙璇侊級
+
+**鍓嶇疆鏉′欢**
+- 宸插畾涔夆€滃畬鎴愭€佸湴褰⑩€濓紙娌兼辰鍦板舰锛夊垽鏂柟寮?- spirit 鍗″彲琚嫋鍒拌鍦板舰鏍?
+**鎿嶄綔姝ラ**
+1. 灏?swamp_spirit 鎷栧埌宸插畬鎴愭布娉藉湴褰㈡牸
+2. 瑙傚療鏁屼汉鐢熸垚涓庡崰鐢ㄥ彉鍖?
+**棰勬湡缁撴灉**
+- 娑堣€?spirit锛堢Щ闄ゆ垨杞寲锛?- 鍦ㄧ洰鏍囨牸鐢熸垚 swamp_enemy锛堟垨瀵瑰簲鏁屼汉锛?- occupancy 鏇存柊姝ｇ‘锛堟棤娈嬬暀寮曠敤锛?- 涓嶅奖鍝嶅叾浠栨嫋鎷?楂樹寒閫昏緫
+
+---
+
+## T07 Boss 闃舵瑙﹀彂涓?BossPreview 琛ㄧ幇
+
+**鍓嶇疆鏉′欢**
+- spawned 杈惧埌 100 鍚庝細杩涘叆 BossReady/BossActive锛堟垨绛変环锛?- BossPreview 鏈夊悕绉?寮辩偣/鎶€鑳藉瓧娈碉紙鍗犱綅涔熷彲锛?
+**鎿嶄綔姝ラ**
+1. 璁?spawned 杈惧埌 100
+2. 瑙傚療 BossPreview 鏄惁鏇存柊/鎻愮ず Boss 闃舵
+3. 灏濊瘯缁х画鐢熸垚鍗＄墝锛堣嫢鏈夌敓鎴愰€昏緫鍏ュ彛锛?
+**棰勬湡缁撴灉**
+- spawned=100 鏃惰繘鍏?Boss 闃舵锛圚UD 鎴栨棩蹇楀彲璇佸疄锛?- BossPreview 灞曠ず Boss 鍚嶇О/寮辩偣/鎶€鑳斤紙鍗犱綅鍙涓斾竴鑷达級
+- Boss 闃舵寮€濮嬪悗涓嶅啀缁х画鐢熸垚鏅€氬崱鐗?
+---
+
+## T08 Boss 鍑昏触闂幆锛堜笉渚濊禆 Debug锛?
+**鍓嶇疆鏉′欢**
+- 瀛樺湪鈥滆Е鍙?Boss 鎴樷€濈殑浜や簰锛堟寜閽垨鎷栨嫿鏌愮洰鏍囧埌 HeroPanel锛?- Boss 鏈?HP锛堟垨绛変环鐘舵€侊級锛屽彲琚垬鏂楃郴缁熷噺灏戠洿鑷?0
+
+**鎿嶄綔姝ラ**
+1. 閫氳繃姝ｅ父浜や簰瑙﹀彂 Boss 鎴橈紙涓嶄娇鐢?DebugBossButton锛?2. 鎸佺画鎴樻枟鐩磋嚦 Boss HP 褰掗浂锛堟垨鑳滃埄鏉′欢杈炬垚锛?
+**棰勬湡缁撴灉**
+- Boss HP 涓嬮檷锛屾垬鏂楁祦绋嬪彲鎸佺画鎺ㄨ繘
+- Boss 琚嚮璐ュ悗鑷姩杩涘叆鑳滃埄娴佺▼锛?  - ThemeChoice 鏄剧ず骞剁疆椤讹紙涓嶈鍗＄墝閬尅锛?  - BossPreview 鐘舵€佹洿鏂帮紙闅愯棌鎴栨樉绀?defeated锛?- 杈撳叆/鎷栨嫿鍦ㄥ脊绐楁湡闂村浜庡彲鎺х姸鎬侊紙鍙攣瀹氭垨闄愬畾浜や簰锛?
+---
+
+## T09 ThemeChoice 閫夋嫨鍚庤繘鍏ヤ笅涓€灞€锛堟渶灏忓垏鍏筹級
+
+**鍓嶇疆鏉′欢**
+- ThemeChoice 鏈?3 涓寜閽紙VBoxContainer/BoxA/BoxB/BoxC锛?- 閫夋嫨涓婚浼氳Е鍙戝垏鎹㈤€昏緫锛堣嚦灏戦噸缃苟寮€濮嬩笅涓€杞級
+
+**鎿嶄綔姝ラ**
+1. 鍦?ThemeChoice 寮瑰嚭鍚庣偣鍑?BoxA/BoxB/BoxC 浠绘剰涓€涓?2. 瑙傚療涓婚鏄惁鍒囨崲銆佸眬闈㈡槸鍚﹂噸缃?
+**棰勬湡缁撴灉**
+- ThemeChoice 闅愯棌
+- HUD theme 鏇存柊涓烘墍閫変富棰橈紙鎴栬緭鍑烘墍閫?id 骞剁珛鍗冲簲鐢級
+- spawned 褰掗浂锛孊oard/OverflowArea 娓呯┖鎴栬繘鍏ヤ笅涓€鍏冲崰浣嶇姸鎬?- 鏂颁竴杞敓鎴?娴佺▼鍙紑濮嬶紙鍙畝鍖栦负閲嶆柊鐢熸垚 100 寮狅級
+
+---
+
+## T10 鍙耽淇濋殰锛堝钩琛?浣撻獙鏈€灏忛獙璇侊級
+
+**鍓嶇疆鏉′欢**
+- XP/灞炴€у闀挎満鍒跺凡鍚敤锛堝嚮璐ユ晫浜?XP > Trash XP 鎺ㄨ崘锛?- 閫氳繃瑁呭鎴栧崌绾ц兘澧炲姞 ATK/HP锛堜换涓€鍗冲彲锛?- Boss 鏈夊浐瀹氭垨鍙娴嬮毦搴︼紙鍙鐜帮級
+
+**鎿嶄綔姝ラ**
+1. 鍥哄畾 seed锛岄噸澶嶈窇 3 灞€锛堟垨 3 娆?Boss 鎴橈級
+2. 姣忓眬閲囩敤鈥滃悎鐞嗙瓥鐣モ€濓細鍚堟垚鐢熸垚鏁屼汉銆佸嚮璐ヨ幏寰?XP/鎺夎惤銆佽澶囨彁鍗?3. 璁板綍鍑昏触 Boss 鏃剁殑 ATK/HP/绛夌骇锛堟垨绛変环鎸囨爣锛?
+**棰勬湡缁撴灉**
+- 鍦ㄥ悎鐞嗙瓥鐣ヤ笅锛? 娆￠兘鑳藉嚮璐?Boss锛堟棤闇€闈犺繍姘旀瀬绔娊鍗★級
+- 鍑昏触 Boss 鏃剁殑鍏抽敭鎸囨爣钀藉湪鍙帴鍙楄寖鍥达紙渚嬪 ATK鈮圶銆丠P鈮圷锛?- 鑻ュけ璐ワ細搴旇兘浠?HUD seed/theme/spawned 涓庢棩蹇椾腑澶嶇幇骞跺畾浣嶅師鍥?
+---
+
+## 甯歌澶辫触妯″紡涓庡畾浣嶆彁绀猴紙绠€琛級
+
+- 鏀剧疆鍋忕Щ锛氭鏌ユ槸鍚︿腑蹇冨榻愶紙card.size/2 鍋忕Щ锛夈€丅oard global/local 鍧愭爣鎹㈢畻
+- 鑴忓崰鐢細绉婚櫎鍗＄墝鏃舵槸鍚﹀悓姝ユ竻鐞?occupancy锛涘悎鎴愬悗鏂板崱鏄惁娉ㄥ唽
+- hover 閬尅锛氶珮浜眰鏄惁缃簬鎷栨嫿鍗′箣涓嬶紱鎷栨嫿鍗℃槸鍚︾疆椤?- UI 琚伄鎸★細ThemeChoice z_index/CanvasLayer 灞傜骇锛汷verflowArea 鏄惁閬垮紑 UI 鍖哄煙
+- Boss 鏃犳硶闂幆锛欱oss 鎴樿Е鍙戜粛渚濊禆 Debug锛汢oss defeated 鏈嚜鍔?show ThemeChoice
+
+[FILE: scripts/main.gd]
+extends Node
+
+@export var theme: ThemeDef
+@export var total_spawn: int = 100
+@export var use_fixed_seed: bool = true
+@export var fixed_seed: int = 12345
+@export var merge_rules: Array[MergeRule] = []
+@export var merge_rules_path: String = "res://data/merge/swamp_rules.tres"
+@export var drop_pool: PackedStringArray = PackedStringArray(["wood_spear", "swamp_spirit", "swamp_mud"])
+@export var enemy_xp_reward: int = 3
+@export var theme_pool: PackedStringArray = PackedStringArray(["swamp", "city"])
+
+@onready var board: Board = $Board
+@onready var hero_panel: HeroPanel = $UI/HeroPanel
+@onready var trash_zone: TrashZone = $UI/TrashZone
+@onready var boss_preview: BossPreview = $UI/BossPreview
+@onready var theme_choice: ThemeChoice = $UI/ThemeChoice
+@onready var card_layer: CardLayer = $UI/CardLayer
+@onready var overflow_area: Control = get_node_or_null("UI/OverflowArea") as Control
+@onready var seed_label: Label = _find_label("SeedLabel")
+@onready var spawn_label: Label = _find_label("SpawnLabel")
+@onready var debug_boss_button: Button = _find_button("DebugBossButton")
+@onready var challenge_boss_button: Button = get_node_or_null("UI/BossPreview/ChallengeBossButton") as Button
+
+const CARD_VIEW_SCENE: PackedScene = preload("res://scenes/cards/CardView.tscn")
+
+var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+var spawned_count: int = 0
+var active_seed: int = 0
+var boss_spawned: bool = false
+var boss_defeated: bool = false
+var boss_hp_max: int = 12
+var boss_hp_current: int = 0
+var drop_count: int = 0
+
+func _ready() -> void:
+	if theme == null:
+		push_error("[Main] ThemeDef not assigned.")
+		return
+	var hud: Control = get_node_or_null("UI/DebugHUD") as Control
+	if hud != null:
+		hud.z_index = 100
+	theme_choice.z_index = 200
+	boss_preview.hide_boss()
+	_set_boss_button_enabled(false)
+	_load_merge_rules()
+	board.set_merge_rules(merge_rules)
+	board.merge_happened.connect(_on_board_merge_happened)
+	board.spirit_terrain_happened.connect(_on_board_spirit_terrain_happened)
+	theme_choice.theme_chosen.connect(_on_theme_chosen)
+	hero_panel.equip_requested.connect(_on_equip_requested)
+	hero_panel.combat_requested.connect(_on_combat_requested)
+	trash_zone.delete_requested.connect(_on_delete_requested)
+	if debug_boss_button == null:
+		push_error("[Main] DebugBossButton not found. Check UI/DebugHUD/DebugBox/DebugBossButton.")
+	else:
+		debug_boss_button.pressed.connect(debug_defeat_boss)
+	if challenge_boss_button == null:
+		push_error("[Main] ChallengeBossButton not found. Check UI/BossPreview/ChallengeBossButton.")
+	else:
+		challenge_boss_button.pressed.connect(_on_challenge_boss_pressed)
+	_setup_seed()
+	_update_debug_hud()
+	_spawn_initial_cards()
+
+func _setup_seed() -> void:
+	if use_fixed_seed:
+		active_seed = fixed_seed
+	else:
+		active_seed = int(Time.get_unix_time_from_system())
+	rng.seed = active_seed
+
+func _load_merge_rules() -> void:
+	if not merge_rules.is_empty():
+		return
+	if merge_rules_path.is_empty():
+		push_error("[Main] Merge rules path is empty.")
+		return
+	var res: Resource = load(merge_rules_path)
+	if res == null:
+		push_error("[Main] Failed to load merge rules: %s" % merge_rules_path)
+		return
+	merge_rules = [res as MergeRule]
+
+func _spawn_initial_cards() -> void:
+	for _i in range(total_spawn):
+		_spawn_one()
+	_update_debug_hud()
+	_try_spawn_boss()
+
+func _try_spawn_boss() -> void:
+	if boss_spawned:
+		return
+	if spawned_count >= total_spawn:
+		boss_spawned = true
+		boss_hp_current = boss_hp_max
+		_show_boss_preview()
+		_set_boss_button_enabled(true)
+		print("[Main] Boss ready.")
+
+func _show_boss_preview() -> void:
+	boss_preview.show_boss("Swamp King", "Fire", PackedStringArray(["Toxic Breath", "Vine Grasp"]))
+	boss_preview.set_boss_hp(boss_hp_current, boss_hp_max)
+
+func _set_boss_button_enabled(enabled: bool) -> void:
+	if challenge_boss_button != null:
+		challenge_boss_button.disabled = not enabled
+
+func _spawn_one() -> void:
+	var card_id := _pick_weighted_id(theme.deck_weights)
+	var card_view := CARD_VIEW_SCENE.instantiate() as CardView
+	card_layer.add_child(card_view)
+	card_view.def_id = card_id
+	card_view.drag_started.connect(_on_card_drag_started)
+	card_view.drag_ended.connect(_on_card_drag_ended)
+	card_view.hover_started.connect(_on_card_hover_started)
+	card_view.hover_ended.connect(_on_card_hover_ended)
+	var label := card_view.get_node_or_null("Label") as Label
+	if label != null:
+		label.text = _get_card_display_name(card_id)
+	_place_spawned_card(card_view, spawned_count)
+	spawned_count += 1
+
+func _place_spawned_card(card_view: CardView, index: int) -> void:
+	var max_board := board.board_size * board.board_size
+	if index < max_board:
+		var cell := Vector2i(index % board.board_size, int(index / board.board_size))
+		board.place_card_at_cell(card_view, cell)
+	else:
+		var extra_index := index - max_board
+		var pile_offset := Vector2((extra_index % 6) * 6, int(extra_index / 6) * 6)
+		_place_in_overflow(card_view, pile_offset)
+
+func _place_in_overflow(card_view: CardView, pile_offset: Vector2) -> void:
+	if overflow_area == null:
+		card_view.global_position = board.global_position + Vector2(12, 12) + pile_offset
+		return
+	card_view.reparent(overflow_area)
+	card_view.global_position = overflow_area.get_global_rect().position + Vector2(8, 8) + pile_offset
+
+func _pick_weighted_id(weights: Dictionary) -> StringName:
+	if weights.is_empty():
+		return &""
+	var total: int = 0
+	for key in weights.keys():
+		total += int(weights[key])
+	var roll: int = rng.randi_range(1, total)
+	var acc: int = 0
+	for key in weights.keys():
+		acc += int(weights[key])
+		if roll <= acc:
+			return StringName(key)
+	return StringName(weights.keys()[0])
+
+func _update_debug_hud() -> void:
+	if seed_label == null or spawn_label == null:
+		push_error("[Main] DebugHUD labels missing. Check UI/DebugHUD/DebugBox/SeedLabel + SpawnLabel.")
+		return
+	seed_label.text = "Seed: %d" % active_seed
+	spawn_label.text = "Theme: %s | Spawned: %d/%d" % [theme.display_name, spawned_count, total_spawn]
+
+func _find_label(label_name: String) -> Label:
+	var node: Node = get_node_or_null("UI/DebugHUD/DebugBox/%s" % label_name) as Node
+	if node == null:
+		node = get_node_or_null("UI/DebugHUD/%s" % label_name)
+	if node == null:
+		var hud: Control = get_node_or_null("UI/DebugHUD") as Control
+		if hud != null:
+			node = hud.find_child(label_name, true, false)
+	return node as Label
+
+func _find_button(button_name: String) -> Button:
+	var node: Node = get_node_or_null("UI/DebugHUD/DebugBox/%s" % button_name) as Node
+	if node == null:
+		node = get_node_or_null("UI/DebugHUD/%s" % button_name)
+	if node == null:
+		var hud: Control = get_node_or_null("UI/DebugHUD") as Control
+		if hud != null:
+			node = hud.find_child(button_name, true, false)
+	return node as Button
+
+func _on_card_hover_started(card_view: CardView) -> void:
+	board.highlight_mergeable(card_view.def_id, card_view)
+
+func _on_card_hover_ended(_card_view: CardView) -> void:
+	board.clear_highlights()
+
+func _on_card_drag_started(card_view: CardView) -> void:
+	board.set_hover_source(card_view.def_id, card_view)
+
+func _on_card_drag_ended(_card_view: CardView) -> void:
+	board.clear_hover_source()
+
+func _on_board_merge_happened(_input_a: StringName, _input_b: StringName, output: StringName, cell: Vector2i) -> void:
+	var card_view := CARD_VIEW_SCENE.instantiate() as CardView
+	card_layer.add_child(card_view)
+	card_view.def_id = output
+	card_view.drag_started.connect(_on_card_drag_started)
+	card_view.drag_ended.connect(_on_card_drag_ended)
+	card_view.hover_started.connect(_on_card_hover_started)
+	card_view.hover_ended.connect(_on_card_hover_ended)
+	var label := card_view.get_node_or_null("Label") as Label
+	if label != null:
+		label.text = _get_card_display_name(output)
+	board.place_card_at_cell(card_view, cell)
+
+func _on_board_spirit_terrain_happened(_spirit_id: StringName, _terrain_id: StringName, output: StringName, cell: Vector2i) -> void:
+	var card_view := CARD_VIEW_SCENE.instantiate() as CardView
+	card_layer.add_child(card_view)
+	card_view.def_id = output
+	card_view.drag_started.connect(_on_card_drag_started)
+	card_view.drag_ended.connect(_on_card_drag_ended)
+	card_view.hover_started.connect(_on_card_hover_started)
+	card_view.hover_ended.connect(_on_card_hover_ended)
+	var label := card_view.get_node_or_null("Label") as Label
+	if label != null:
+		label.text = _get_card_display_name(output)
+	board.place_card_at_cell(card_view, cell)
+
+func _get_card_display_name(card_id: StringName) -> String:
+	var path := "res://data/cards/%s.tres" % String(card_id)
+	var res := load(path)
+	if res == null:
+		return String(card_id)
+	var def := res as CardDef
+	if def == null:
+		return String(card_id)
+	if def.display_name.is_empty():
+		return String(card_id)
+	return def.display_name
+
+func _on_theme_chosen(theme_id: StringName) -> void:
+	print("[Main] Theme chosen:", theme_id)
+	theme_choice.hide_choices()
+	_set_card_interaction_enabled(true)
+	if boss_defeated:
+		boss_preview.hide_boss()
+	_apply_theme_by_id(theme_id)
+
+func _set_card_interaction_enabled(enabled: bool) -> void:
+	var cards := get_tree().get_nodes_in_group("card_view")
+	for node in cards:
+		var card := node as CardView
+		if card != null:
+			card.interaction_enabled = enabled
+
+func _on_challenge_boss_pressed() -> void:
+	if not boss_spawned or boss_defeated:
+		return
+	_resolve_boss_combat()
+
+func _resolve_boss_combat() -> void:
+	var boss_atk: int = 1
+	var boss_def: int = 0
+	var hero_hp: int = hero_panel.hp
+	var boss_hp: int = boss_hp_current
+	while hero_hp > 0 and boss_hp > 0:
+		var hero_dmg: int = max(hero_panel.get_attack() - boss_def, 1)
+		boss_hp -= hero_dmg
+		if boss_hp <= 0:
+			break
+		var boss_dmg: int = max(boss_atk - hero_panel.get_defense(), 1)
+		hero_hp -= boss_dmg
+	boss_hp_current = max(boss_hp, 0)
+	hero_panel.hp = max(hero_hp, 0)
+	boss_preview.set_boss_hp(boss_hp_current, boss_hp_max)
+	if boss_hp_current <= 0:
+		_on_boss_defeated()
+
+func _on_boss_defeated() -> void:
+	if boss_defeated:
+		return
+	boss_defeated = true
+	boss_preview.set_boss_hp(0, boss_hp_max)
+	_set_boss_button_enabled(false)
+	_set_card_interaction_enabled(false)
+	_show_theme_choices()
+	print("[Main] Boss defeated.")
+
+func _on_equip_requested(card_view: CardView) -> void:
+	if card_view.def_id == &"wood_spear":
+		hero_panel.apply_equipment_bonus({"atk_bonus": 1})
+	_consume_card(card_view)
+
+func _on_combat_requested(card_view: CardView) -> void:
+	if card_view.def_id != &"swamp_enemy":
+		return
+	var enemy_hp: int = 3
+	var enemy_atk: int = 1
+	var enemy_def: int = 0
+	var hero_hp: int = hero_panel.hp
+	while hero_hp > 0 and enemy_hp > 0:
+		var hero_dmg: int = max(hero_panel.get_attack() - enemy_def, 1)
+		enemy_hp -= hero_dmg
+		if enemy_hp <= 0:
+			break
+		var enemy_dmg: int = max(enemy_atk - hero_panel.get_defense(), 1)
+		hero_hp -= enemy_dmg
+	hero_panel.hp = max(hero_hp, 0)
+	if enemy_hp <= 0:
+		hero_panel.add_xp(enemy_xp_reward)
+		_spawn_drop_from_pool()
+	_consume_card(card_view)
+
+func _on_delete_requested(card_view: CardView) -> void:
+	hero_panel.add_xp(1)
+	_consume_card(card_view)
+
+func _consume_card(card_view: CardView) -> void:
+	board.remove_card(card_view)
+	card_view.queue_free()
+
+func _spawn_drop_from_pool() -> void:
+	if drop_pool.is_empty():
+		return
+	var pick_index: int = rng.randi_range(0, drop_pool.size() - 1)
+	var card_id := StringName(drop_pool[pick_index])
+	var card_view := CARD_VIEW_SCENE.instantiate() as CardView
+	card_layer.add_child(card_view)
+	card_view.def_id = card_id
+	card_view.drag_started.connect(_on_card_drag_started)
+	card_view.drag_ended.connect(_on_card_drag_ended)
+	card_view.hover_started.connect(_on_card_hover_started)
+	card_view.hover_ended.connect(_on_card_hover_ended)
+	var label := card_view.get_node_or_null("Label") as Label
+	if label != null:
+		label.text = _get_card_display_name(card_id)
+	var pile_offset := Vector2((drop_count % 6) * 6, int(drop_count / 6) * 6)
+	_place_in_overflow(card_view, pile_offset)
+	drop_count += 1
+
+func debug_defeat_boss() -> void:
+	boss_spawned = true
+	if boss_defeated:
+		return
+	boss_defeated = true
+	boss_preview.hide_boss()
+	_set_boss_button_enabled(false)
+	_set_card_interaction_enabled(false)
+	_show_theme_choices()
+	print("[Main] Debug defeat boss triggered.")
+
+func _show_theme_choices() -> void:
+	var ids := _get_next_theme_ids()
+	if ids.size() < 3:
+		return
+	var a := _get_theme_display_name(ids[0])
+	var b := _get_theme_display_name(ids[1])
+	var c := _get_theme_display_name(ids[2])
+	theme_choice.show_choices(a, b, c, ids[0], ids[1], ids[2])
+
+func _get_next_theme_ids() -> PackedStringArray:
+	var pool := theme.next_theme_pool if theme != null and not theme.next_theme_pool.is_empty() else theme_pool
+	if pool.is_empty():
+		return PackedStringArray([&"swamp", &"city", &"swamp"])
+	var result: PackedStringArray = PackedStringArray()
+	var i := 0
+	while result.size() < 3 and i < pool.size():
+		result.append(pool[i])
+		i += 1
+	while result.size() < 3:
+		result.append(pool[0])
+	return result
+
+func _get_theme_display_name(theme_id: StringName) -> String:
+	var def := _load_theme_def(theme_id)
+	if def != null and not def.display_name.is_empty():
+		return def.display_name
+	return String(theme_id)
+
+func _load_theme_def(theme_id: StringName) -> ThemeDef:
+	var path := "res://data/themes/%s_theme.tres" % String(theme_id)
+	var res := load(path)
+	return res as ThemeDef
+
+func _apply_theme_by_id(theme_id: StringName) -> void:
+	var new_theme := _load_theme_def(theme_id)
+	if new_theme == null:
+		push_error("[Main] Theme not found: %s" % String(theme_id))
+		return
+	theme = new_theme
+	_reset_run()
+
+func _reset_run() -> void:
+	var cards := get_tree().get_nodes_in_group("card_view")
+	for node in cards:
+		var card := node as CardView
+		if card != null:
+			card.queue_free()
+	board.clear_highlights()
+	board.occupancy.clear()
+	spawned_count = 0
+	drop_count = 0
+	boss_spawned = false
+	boss_defeated = false
+	boss_hp_current = 0
+	_setup_seed()
+	_update_debug_hud()
+	call_deferred("_start_spawn_sequence")
+
+func _start_spawn_sequence() -> void:
+	var timer := get_tree().create_timer(0.1)
+	timer.timeout.connect(_spawn_initial_cards)
+
+[FILE: scripts/board/board.gd]
+class_name Board
+extends Control
+
+signal board_cell_dropped(card_view: Node, cell: Vector2i)
+signal merge_happened(input_a: StringName, input_b: StringName, output: StringName, cell: Vector2i)
+signal spirit_terrain_happened(spirit_id: StringName, terrain_id: StringName, output: StringName, cell: Vector2i)
+
+@export var board_size: int = 9
+@export var cell_size: int = 64
+@export var hover_debug: bool = true
+
+@onready var occupancy_layer: Control = $OccupancyLayer
+
+var occupancy: Dictionary[Vector2i, CardView] = {}
+var merge_rules: Array[MergeRule] = []
+var _hover_def_id: StringName = &""
+var _hover_locked: bool = false
+var _card_def_cache: Dictionary[StringName, CardDef] = {}
+
+func _ready() -> void:
+	pass
+
+func _process(_delta: float) -> void:
+	if hover_debug:
+		if not _hover_locked:
+			_update_hover_highlight()
+
+func can_accept_drop(_card_view: CardView) -> bool:
+	return true
+
+func accept_drop(card_view: CardView) -> bool:
+	var card_center := card_view.get_global_rect().position + (card_view.size * 0.5)
+	var cell := global_pos_to_cell(card_center)
+	if not _is_cell_in_bounds(cell):
+		print("[Board] Drop rejected (out of bounds):", cell)
+		return false
+	var existing: CardView = occupancy.get(cell) as CardView
+	if existing != null and existing != card_view:
+		var existing_def := _get_card_def(existing.def_id)
+		var incoming_def := _get_card_def(card_view.def_id)
+		if _is_complete_terrain(existing_def) and _is_spirit(incoming_def):
+			return _resolve_spirit_terrain(existing, card_view, existing.def_id, card_view.def_id, cell)
+		if _is_complete_terrain(incoming_def) and _is_spirit(existing_def):
+			return _resolve_spirit_terrain(existing, card_view, existing.def_id, card_view.def_id, cell)
+		var rule := _find_merge_rule(card_view.def_id, existing.def_id)
+		if rule != null:
+			return _resolve_merge(existing, card_view, rule, cell)
+		print("[Board] Drop rejected (occupied):", cell)
+		return false
+	_remove_card_from_occupancy(card_view)
+	occupancy[cell] = card_view
+	card_view.reparent(occupancy_layer)
+	card_view.global_position = cell_to_global_pos(cell, card_view.size)
+	print("[Board] Drop accepted (cell):", cell)
+	return true
+
+func cell_to_global_pos(cell: Vector2i, card_size: Vector2) -> Vector2:
+	var board_origin := get_global_rect().position
+	var cell_origin := board_origin + Vector2(cell.x * cell_size, cell.y * cell_size)
+	var cell_center := cell_origin + Vector2(cell_size * 0.5, cell_size * 0.5)
+	return cell_center - (card_size * 0.5)
+
+func global_pos_to_cell(global_pos: Vector2) -> Vector2i:
+	var board_origin := get_global_rect().position
+	var local := global_pos - board_origin
+	return Vector2i(floor(local.x / cell_size), floor(local.y / cell_size))
+
+func _is_cell_in_bounds(cell: Vector2i) -> bool:
+	return cell.x >= 0 and cell.y >= 0 and cell.x < board_size and cell.y < board_size
+
+func _remove_card_from_occupancy(card_view: CardView) -> void:
+	var to_remove: Vector2i = Vector2i(-1, -1)
+	for cell: Vector2i in occupancy.keys():
+		if occupancy[cell] == card_view:
+			to_remove = cell
+			break
+	if to_remove.x != -1:
+		occupancy.erase(to_remove)
+
+func remove_card(card_view: CardView) -> void:
+	_remove_card_from_occupancy(card_view)
+
+func set_merge_rules(rules: Array[MergeRule]) -> void:
+	merge_rules = []
+	for rule in rules:
+		if rule != null:
+			merge_rules.append(rule)
+
+func place_card_at_cell(card_view: CardView, cell: Vector2i) -> void:
+	occupancy[cell] = card_view
+	card_view.reparent(occupancy_layer)
+	card_view.global_position = cell_to_global_pos(cell, card_view.size)
+
+func highlight_mergeable(def_id: StringName, exclude: CardView = null) -> void:
+	for cell: Vector2i in occupancy.keys():
+		var other := occupancy[cell]
+		if other == null:
+			continue
+		if exclude != null and other == exclude:
+			other.set_highlighted(false)
+			continue
+		var can_merge := _can_trigger_interaction(def_id, other.def_id)
+		other.set_highlighted(can_merge)
+
+func clear_highlights() -> void:
+	for cell: Vector2i in occupancy.keys():
+		var other := occupancy[cell]
+		if other != null:
+			other.set_highlighted(false)
+	_hover_def_id = &""
+
+func set_hover_source(def_id: StringName, exclude: CardView = null) -> void:
+	_hover_locked = true
+	_hover_def_id = def_id
+	highlight_mergeable(def_id, exclude)
+
+func clear_hover_source() -> void:
+	_hover_locked = false
+	clear_highlights()
+
+func _find_merge_rule(id_a: StringName, id_b: StringName) -> MergeRule:
+	for rule in merge_rules:
+		if rule == null:
+			continue
+		if _rule_matches(rule, id_a, id_b):
+			return rule
+	return null
+
+func _can_trigger_interaction(id_a: StringName, id_b: StringName) -> bool:
+	if _find_merge_rule(id_a, id_b) != null:
+		return true
+	var def_a := _get_card_def(id_a)
+	var def_b := _get_card_def(id_b)
+	if def_a == null or def_b == null:
+		return false
+	return (_is_complete_terrain(def_a) and _is_spirit(def_b)) or (_is_complete_terrain(def_b) and _is_spirit(def_a))
+
+func _rule_matches(rule: MergeRule, id_a: StringName, id_b: StringName) -> bool:
+	if rule.inputs.size() != 2:
+		return false
+	var a := String(id_a)
+	var b := String(id_b)
+	if a == "" or b == "":
+		return false
+	if a == b:
+		return rule.inputs[0] == a and rule.inputs[1] == a
+	return rule.inputs.has(a) and rule.inputs.has(b)
+
+func _resolve_merge(existing: CardView, incoming: CardView, rule: MergeRule, cell: Vector2i) -> bool:
+	_remove_card_from_occupancy(existing)
+	_remove_card_from_occupancy(incoming)
+	existing.queue_free()
+	incoming.queue_free()
+	merge_happened.emit(existing.def_id, incoming.def_id, rule.output, cell)
+	return true
+
+func _resolve_spirit_terrain(existing: CardView, incoming: CardView, existing_id: StringName, incoming_id: StringName, cell: Vector2i) -> bool:
+	_remove_card_from_occupancy(existing)
+	_remove_card_from_occupancy(incoming)
+	existing.queue_free()
+	incoming.queue_free()
+	spirit_terrain_happened.emit(existing_id, incoming_id, &"swamp_enemy", cell)
+	return true
+
+func _get_card_def(card_id: StringName) -> CardDef:
+	if card_id == &"":
+		return null
+	if _card_def_cache.has(card_id):
+		return _card_def_cache[card_id]
+	var path := "res://data/cards/%s.tres" % String(card_id)
+	var res := load(path)
+	var def := res as CardDef
+	if def != null:
+		_card_def_cache[card_id] = def
+	return def
+
+func _is_complete_terrain(def: CardDef) -> bool:
+	if def == null:
+		return false
+	if def.kind != CardDef.CardKind.TERRAIN_PART:
+		return false
+	return bool(def.stats.get("complete_terrain", false))
+
+func _is_spirit(def: CardDef) -> bool:
+	if def == null:
+		return false
+	return def.kind == CardDef.CardKind.SPIRIT
+
+func _update_hover_highlight() -> void:
+	var mouse_pos := get_viewport().get_mouse_position()
+	if not get_global_rect().has_point(mouse_pos):
+		if _hover_def_id != &"":
+			clear_highlights()
+		return
+	var cell := global_pos_to_cell(mouse_pos)
+	var hovered: CardView = occupancy.get(cell) as CardView
+	var new_def_id := hovered.def_id if hovered != null else &""
+	if new_def_id == _hover_def_id:
+		return
+	_hover_def_id = new_def_id
+	if _hover_def_id == &"":
+		clear_highlights()
+	else:
+		highlight_mergeable(_hover_def_id)
+
+func debug_drop(card_view: Node, cell: Vector2i) -> void:
+	print("[Board] Drop request:", card_view, "cell:", cell)
+	board_cell_dropped.emit(card_view, cell)
+
+[FILE: scripts/ui/card_layer.gd]
+class_name CardLayer
+extends Control
+
+@onready var hero_panel: HeroPanel = get_parent().get_node("HeroPanel")
+@onready var hero_area: Control = hero_panel.get_node("ColorRect")
+@onready var trash_zone: TrashZone = get_parent().get_node("TrashZone")
+@onready var trash_area: Control = trash_zone.get_node("ColorRect")
+@onready var board: Board = get_parent().get_parent().get_node("Board")
+
+func _ready() -> void:
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+func handle_drop_from_card(card_view: CardView) -> bool:
+	var mouse_pos := get_viewport().get_mouse_position()
+	if trash_area.get_global_rect().has_point(mouse_pos) and trash_zone.can_accept_drop(card_view):
+		trash_zone.accept_drop(card_view)
+		return true
+	if hero_area.get_global_rect().has_point(mouse_pos) and hero_panel.can_accept_drop(card_view):
+		hero_panel.accept_drop(card_view)
+		return true
+	if board.get_global_rect().has_point(mouse_pos) and board.can_accept_drop(card_view):
+		return board.accept_drop(card_view)
+	return false
+
+[FILE: scripts/cards/card_view.gd]
+class_name CardView
+extends Control
+
+signal drag_started(card_view: Node)
+signal drag_ended(card_view: Node)
+signal hover_started(card_view: CardView)
+signal hover_ended(card_view: CardView)
+
+var def_id: StringName = &""
+var interaction_enabled: bool = true
+
+var _dragging: bool = false
+var _drag_offset: Vector2 = Vector2.ZERO
+var _start_pos: Vector2 = Vector2.ZERO
+var _prev_z_index: int = 0
+var _prev_z_relative: bool = true
+var _prev_top_level: bool = false
+
+@onready var highlight: Control = get_node_or_null("Highlight") as Control
+
+func _ready() -> void:
+	add_to_group("card_view")
+	if highlight != null:
+		highlight.visible = false
+		highlight.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		highlight.z_index = 10
+		highlight.set_anchors_preset(Control.PRESET_FULL_RECT)
+
+func _gui_input(event: InputEvent) -> void:
+	if not interaction_enabled:
+		return
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			_dragging = true
+			_start_pos = global_position
+			_drag_offset = get_global_mouse_position() - global_position
+			_prev_z_index = z_index
+			_prev_z_relative = z_as_relative
+			_prev_top_level = is_set_as_top_level()
+			set_as_top_level(true)
+			z_as_relative = false
+			z_index = 1000
+			drag_started.emit(self)
+			move_to_front()
+			get_viewport().set_input_as_handled()
+		elif _dragging:
+			_dragging = false
+			z_index = _prev_z_index
+			z_as_relative = _prev_z_relative
+			set_as_top_level(_prev_top_level)
+			drag_ended.emit(self)
+			var accepted := false
+			var card_layer := _find_card_layer()
+			if card_layer != null:
+				accepted = card_layer.handle_drop_from_card(self)
+			if not accepted:
+				global_position = _start_pos
+
+func _process(_delta: float) -> void:
+	if _dragging:
+		global_position = get_global_mouse_position() - _drag_offset
+
+func _mouse_entered() -> void:
+	if not interaction_enabled:
+		return
+	hover_started.emit(self)
+
+func _mouse_exited() -> void:
+	if not interaction_enabled:
+		return
+	hover_ended.emit(self)
+
+func set_highlighted(enabled: bool) -> void:
+	if highlight != null:
+		highlight.visible = enabled
+
+func _find_card_layer() -> Node:
+	var node := get_parent()
+	while node != null:
+		if node.has_method("handle_drop_from_card"):
+			return node
+		node = node.get_parent()
+	var root := get_tree().root
+	if root == null:
+		return null
+	var found := root.find_child("CardLayer", true, false)
+	if found != null and found.has_method("handle_drop_from_card"):
+		return found
+	return null
+
+[FILE: scripts/ui/hero_panel.gd]
+class_name HeroPanel
+extends Control
+
+signal equip_requested(card_view: CardView)
+signal combat_requested(enemy_card_view: CardView)
+
+@export var base_hp: int = 10
+@export var base_atk: int = 2
+@export var base_def: int = 0
+
+@onready var hp_label: Label = $HpLabel
+@onready var atk_label: Label = $AtkLabel
+@onready var def_label: Label = $DefLabel
+@onready var xp_label: Label = $XpLabel
+
+var hp: int = 0
+var atk: int = 0
+var defense: int = 0
+var xp: int = 0
+
+func _ready() -> void:
+	hp = base_hp
+	atk = base_atk
+	defense = base_def
+	xp = 0
+	_update_labels()
+
+func accept_drop(card_view: CardView) -> void:
+	if card_view.def_id == &"swamp_enemy":
+		combat_requested.emit(card_view)
+	else:
+		equip_requested.emit(card_view)
+
+func can_accept_drop(_card_view: CardView) -> bool:
+	return true
+
+func apply_equipment_bonus(stats: Dictionary) -> void:
+	atk += int(stats.get("atk_bonus", 0))
+	defense += int(stats.get("def_bonus", 0))
+	hp += int(stats.get("hp_bonus", 0))
+	_update_labels()
+
+func apply_damage(amount: int) -> void:
+	hp = max(hp - amount, 0)
+	_update_labels()
+
+func add_xp(amount: int) -> void:
+	xp += amount
+	_update_labels()
+
+func get_attack() -> int:
+	return atk
+
+func get_defense() -> int:
+	return defense
+
+func _update_labels() -> void:
+	hp_label.text = "HP: %d" % hp
+	atk_label.text = "ATK: %d" % atk
+	def_label.text = "DEF: %d" % defense
+	xp_label.text = "XP: %d" % xp
+
+[FILE: scripts/ui/trash_zone.gd]
+class_name TrashZone
+extends Control
+
+signal delete_requested(card_view: CardView)
+
+func _ready() -> void:
+	pass
+
+func accept_drop(card_view: CardView) -> void:
+	delete_requested.emit(card_view)
+
+func can_accept_drop(_card_view: CardView) -> bool:
+	return true
+
+[FILE: scripts/ui/theme_choice.gd]
+class_name ThemeChoice
+extends Control
+
+signal theme_chosen(theme_id: StringName)
+
+@onready var box_a: Button = get_node_or_null("VBoxContainer/BoxA") as Button
+@onready var box_b: Button = get_node_or_null("VBoxContainer/BoxB") as Button
+@onready var box_c: Button = get_node_or_null("VBoxContainer/BoxC") as Button
+var _ids: PackedStringArray = PackedStringArray()
+
+func _ready() -> void:
+	visible = false
+	if box_a == null or box_b == null or box_c == null:
+		push_error("[ThemeChoice] Missing BoxA/BoxB/BoxC buttons.")
+		return
+	box_a.pressed.connect(func(): _choose_index(0))
+	box_b.pressed.connect(func(): _choose_index(1))
+	box_c.pressed.connect(func(): _choose_index(2))
+
+func show_choices(a: String, b: String, c: String, a_id: StringName, b_id: StringName, c_id: StringName) -> void:
+	if box_a == null or box_b == null or box_c == null:
+		return
+	visible = true
+	box_a.text = a
+	box_b.text = b
+	box_c.text = c
+	_ids = PackedStringArray([a_id, b_id, c_id])
+
+func hide_choices() -> void:
+	visible = false
+
+func _choose_index(index: int) -> void:
+	if index < 0 or index >= _ids.size():
+		return
+	emit_signal("theme_chosen", _ids[index])
+
+[FILE: scripts/ui/boss_preview.gd]
+class_name BossPreview
+extends Control
+
+@onready var name_label: Label = $NameLabel
+@onready var weakness_label: Label = $WeaknessLabel
+@onready var skills_label: Label = $SkillsLabel
+@onready var hp_label: Label = $BossHP
+
+func show_boss(name_text: String, weakness: String, skills: PackedStringArray) -> void:
+	visible = true
+	name_label.text = "Boss: %s" % name_text
+	weakness_label.text = "Weakness: %s" % weakness
+	skills_label.text = "Skills: %s" % ", ".join(skills)
+
+func hide_boss() -> void:
+	visible = false
+
+func set_boss_hp(current: int, max_hp: int) -> void:
+	if hp_label == null:
+		return
+	hp_label.text = "HP: %d/%d" % [current, max_hp]
+
+[FILE: scripts/data/theme_def.gd]
+class_name ThemeDef
+extends Resource
+
+@export var id: StringName
+@export var display_name: String = ""
+@export var deck_weights: Dictionary = {}
+@export var boss_id: StringName = &""
+@export var visuals: Dictionary = {}
+@export var next_theme_pool: PackedStringArray = []
+
+[FILE: scripts/data/card_def.gd]
+class_name CardDef
+extends Resource
+
+enum CardKind {
+	TERRAIN_PART,
+	SPIRIT,
+	EQUIPMENT,
+	JUNK,
+	GENERATED_ENEMY
+}
+
+enum Rarity {
+	COMMON,
+	UNCOMMON,
+	RARE,
+	EPIC,
+	LEGENDARY
+}
+
+enum EquipmentSlot {
+	NONE,
+	WEAPON,
+	ARMOR,
+	TRINKET
+}
+
+enum SpiritTier {
+	NORMAL,
+	ELITE
+}
+
+@export var id: StringName
+@export var display_name: String = ""
+@export var kind: CardKind = CardKind.TERRAIN_PART
+@export var rarity: Rarity = Rarity.COMMON
+@export var theme_tags: PackedStringArray = []
+@export var stackable: bool = false
+@export var equipment_slot: EquipmentSlot = EquipmentSlot.NONE
+@export var stats: Dictionary = {}
+@export var terrain_part: StringName = &""
+@export var spirit_tier: SpiritTier = SpiritTier.NORMAL
+
+[FILE: scripts/data/merge_rule.gd]
+class_name MergeRule
+extends Resource
+
+@export var id: StringName
+@export var inputs: PackedStringArray = []
+@export var output: StringName
+@export var consume_inputs: bool = true
+@export var output_count: int = 1
+@export var notes: String = ""
+

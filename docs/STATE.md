@@ -50,7 +50,7 @@ T7 (BossPreview + ThemeChoice)
 T8 (MVP combat + rewards)
 - Trash rewards: drop card in TrashZone -> XP +1
 - Equipment: drop wood_spear in HeroPanel -> ATK +1
-- Combat: drop swamp_enemy in HeroPanel -> HP down, XP +2
+- Combat: drop swamp_enemy in HeroPanel -> HP down, XP +3 (from +2, M1.1/T11)
 - UI stats (HP/ATK/DEF/XP) update live
 
 ## Key Decisions
