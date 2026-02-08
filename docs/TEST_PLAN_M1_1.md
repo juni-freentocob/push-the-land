@@ -171,7 +171,7 @@
 ## T08 Boss 击败闭环（不依赖 Debug）
 
 **前置条件**
-- 存在“触发 Boss 战”的交互（按钮或拖拽某目标到 HeroPanel）
+- 存在“触发 Boss 战”的交互（ChallengeBossButton）
 - Boss 有 HP（或等价状态），可被战斗系统减少直至 0
 
 **操作步骤**
@@ -200,8 +200,8 @@
 **预期结果**
 - ThemeChoice 隐藏
 - HUD theme 更新为所选主题（或输出所选 id 并立即应用）
-- spawned 归零，Board/OverflowArea 清空或进入下一关占位状态
-- 新一轮生成/流程可开始（可简化为重新生成 100 张）
+- spawned 归零后再开始生成；Board/OverflowArea 清空
+- 新一轮生成/流程可开始（可简化为重新生成 100 张；掉落进入 OverflowArea）
 
 ---
 

@@ -95,6 +95,8 @@ ThemeChoice mapping:
 ## 7.1) Theme pool (runtime)
 Fields:
 - theme_pool: PackedStringArray (fallback theme ids)
+Location:
+- Main.theme_pool export var
 
 ## 8) Runtime instance (not a Resource)
 CardInstance:
@@ -113,3 +115,5 @@ Current pool:
 XP rules (MVP):
 - Trash: +1 XP
 - Kill: +3 XP
+Placement:
+- Drops spawn into OverflowArea (stacked)

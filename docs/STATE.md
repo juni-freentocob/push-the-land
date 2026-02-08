@@ -65,6 +65,9 @@ T8 (MVP combat + rewards)
 - Board placement uses occupancy map keyed by Vector2i cells
 - CardView can be reparented to Board/OccupancyLayer and remain draggable
 - CardLayer hit-tests ColorRect bounds for UI drops
+- Boss flow: BossReady -> BossFight -> BossDefeated -> ThemeChoice -> NextRun
+- 81-grid limit enforced; OverflowArea holds extra cards
+- MVP simplifications: MergeRule.consume_inputs/output_count not used; combat is simple loop
 
 ## Next Steps (Planned)
 - M2: Theme branching (3 boxes) + multiple themes
@@ -74,7 +77,7 @@ T8 (MVP combat + rewards)
 - T10: Spirit + terrain -> enemy as main path — DONE
 - T11: Drop + growth loop to make boss winnable — DONE
 - T12: ThemeChoice leads to a real new round — DONE
-- T13: Docs + verification updates — TODO
+- T13: Docs + verification updates — DONE
 
 ## Recent Decisions (M1.1)
 - Boss no longer depends on DebugBossButton; ChallengeBossButton drives combat.

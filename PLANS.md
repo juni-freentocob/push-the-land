@@ -138,7 +138,7 @@
 - T10: Spirit + terrain -> enemy as main path – DONE
 - T11: Drop + growth loop to make boss winnable – DONE
 - T12: ThemeChoice leads to a real new round – DONE
-- T13: Docs + verification updates – TODO
+- T13: Docs + verification updates – DONE
 **T9 Completion**
 - 100 cards -> BossReady, BossPreview shows boss info + BossHP
 - ChallengeBossButton triggers boss combat (no DebugBossButton required)
@@ -160,6 +160,9 @@
 - Theme source: theme.next_theme_pool (preferred) or default theme_pool fallback
 - Added city_theme placeholder for switching validation
 - DebugHUD shows 0/100 on reset before spawning begins
+**T13 Completion**
+- M1.1 decisions, schema, and scene tree notes updated
+- Test plan maintained as docs/TEST_PLAN_M1_1.md
 
 ### M2 — Theme branching (3 boxes) + multiple themes (City / Swamp / Sanctuary)
 **Scope**
@@ -216,6 +219,11 @@
 - 2026-01-20: GridVisual is debug-only visualization; future art can replace without changing logic.
 - 2026-01-20: T4 resources and .tres data landed; boss_id and swamp_enemy are placeholders for T7/T8.
 - 2026-01-20: RNG supports fixed seed or system-time seed for reproducible spawns (configured in Main export vars).
+- 2026-02-03: Boss flow no longer depends on DebugBossButton; ChallengeBossButton starts combat and boss defeat auto-opens ThemeChoice.
+- 2026-02-03: ThemeChoice locks card drag while visible (input lock strategy).
+- 2026-02-03: Spirit + complete terrain is the main enemy-generation path; MergeRule spirit+mud remains for now.
+- 2026-02-03: Kill XP > Trash XP (MVP: +3 vs +1) and enemy drops come from a fixed drop_pool.
+- 2026-02-03: ThemeChoice selection resets run state and restarts spawning; next_theme_pool preferred, else Main.theme_pool fallback.
 
 ## 6. Debug/Test strategy
 - Deterministic RNG seed toggle

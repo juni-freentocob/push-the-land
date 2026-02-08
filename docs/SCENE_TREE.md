@@ -8,6 +8,7 @@ Main (Node)
   - TrashZone (Control)
   - BossPreview (Control)
   - ThemeChoice (Control) [hidden most of the time]
+  - OverflowArea (Control) [overflow cards stack here]
   - DebugHUD (Control) [optional]
 
 Responsibilities:
@@ -39,6 +40,8 @@ Responsibilities:
 Responsibilities:
 - Receives drag release and dispatches to TrashZone > HeroPanel > Board
 - Hit-tests visible ColorRect areas for UI drops
+Path:
+- UI/CardLayer
 
 ## CardView.tscn
 CardView (Control)
@@ -95,3 +98,5 @@ UI path notes:
 - UI/ThemeChoice/VBoxContainer/BoxC
 - UI/DebugHUD/DebugBossButton (debug only)
 - ThemeChoice uses high z_index to stay above cards
+UI ordering:
+- ThemeChoice z_index above card layer; UI is CanvasLayer
