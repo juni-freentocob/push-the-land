@@ -21,6 +21,7 @@ extends Node
 @onready var spawn_label: Label = _find_label("SpawnLabel")
 @onready var debug_boss_button: Button = _find_button("DebugBossButton")
 @onready var challenge_boss_button: Button = get_node_or_null("UI/BossPreview/ChallengeBossButton") as Button
+@onready var debug_damage_button: Button = get_node_or_null("UI/HeroPanel/DebugDamage") as Button
 
 const CARD_VIEW_SCENE: PackedScene = preload("res://scenes/cards/CardView.tscn")
 
@@ -32,6 +33,7 @@ var boss_defeated: bool = false
 var boss_hp_max: int = 12
 var boss_hp_current: int = 0
 var drop_count: int = 0
+var boss_fight_active: bool = false
 
 func _ready() -> void:
 	if theme == null:
@@ -59,6 +61,10 @@ func _ready() -> void:
 		push_error("[Main] ChallengeBossButton not found. Check UI/BossPreview/ChallengeBossButton.")
 	else:
 		challenge_boss_button.pressed.connect(_on_challenge_boss_pressed)
+	if debug_damage_button == null:
+		push_error("[Main] DebugDamage button not found. Check UI/HeroPanel/DebugDamage.")
+	else:
+		debug_damage_button.pressed.connect(_on_debug_damage_pressed)
 	_setup_seed()
 	_update_debug_hud()
 	_spawn_initial_cards()
@@ -245,9 +251,29 @@ func _set_card_interaction_enabled(enabled: bool) -> void:
 			card.interaction_enabled = enabled
 
 func _on_challenge_boss_pressed() -> void:
-	if not boss_spawned or boss_defeated:
+	if not boss_spawned and spawned_count >= total_spawn:
+		boss_spawned = true
+		boss_hp_current = boss_hp_max
+		_show_boss_preview()
+		_set_boss_button_enabled(true)
+	if not boss_spawned:
+		push_warning("[Main] ChallengeBoss ignored: boss not ready.")
 		return
-	_resolve_boss_combat()
+	if boss_defeated:
+		return
+	if boss_hp_current <= 0:
+		boss_hp_current = boss_hp_max
+		boss_preview.set_boss_hp(boss_hp_current, boss_hp_max)
+	boss_fight_active = true
+
+func _on_debug_damage_pressed() -> void:
+	if not boss_fight_active:
+		return
+	boss_hp_current = max(boss_hp_current - 1, 0)
+	boss_preview.set_boss_hp(boss_hp_current, boss_hp_max)
+	if boss_hp_current <= 0:
+		boss_fight_active = false
+		_on_boss_defeated()
 
 func _resolve_boss_combat() -> void:
 	var boss_atk: int = 1
@@ -394,10 +420,7 @@ func _reset_run() -> void:
 	boss_spawned = false
 	boss_defeated = false
 	boss_hp_current = 0
+	boss_fight_active = false
 	_setup_seed()
 	_update_debug_hud()
-	call_deferred("_start_spawn_sequence")
-
-func _start_spawn_sequence() -> void:
-	var timer := get_tree().create_timer(0.1)
-	timer.timeout.connect(_spawn_initial_cards)
+	_spawn_initial_cards()

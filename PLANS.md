@@ -224,6 +224,8 @@
 - 2026-02-03: Spirit + complete terrain is the main enemy-generation path; MergeRule spirit+mud remains for now.
 - 2026-02-03: Kill XP > Trash XP (MVP: +3 vs +1) and enemy drops come from a fixed drop_pool.
 - 2026-02-03: ThemeChoice selection resets run state and restarts spawning; next_theme_pool preferred, else Main.theme_pool fallback.
+- 2026-02-03: Tested delayed spawn hook for ChallengeBoss validation; removed afterward, but may reintroduce for future spawn pacing/animation.
+- 2026-02-03: Boss combat is non-simulated in M1.1: ChallengeBoss enters fight state, DebugDamage is the only HP reducer, and ThemeChoice triggers only when HP<=0.
 
 ## 6. Debug/Test strategy
 - Deterministic RNG seed toggle

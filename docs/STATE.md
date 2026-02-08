@@ -69,6 +69,12 @@ T8 (MVP combat + rewards)
 - 81-grid limit enforced; OverflowArea holds extra cards
 - MVP simplifications: MergeRule.consume_inputs/output_count not used; combat is simple loop
 
+## Boss Combat (M1.1)
+- Challenge Boss does not resolve combat; it only enters BossFight state
+- DebugDamage is the only HP reducer (temporary tool; will be replaced by real combat ticks/animation)
+- ThemeChoice appears only when Boss HP <= 0
+- M1.1 validates the state machine, not combat balance or pacing
+
 ## Next Steps (Planned)
 - M2: Theme branching (3 boxes) + multiple themes
 

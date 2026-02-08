@@ -175,11 +175,12 @@
 - Boss 有 HP（或等价状态），可被战斗系统减少直至 0
 
 **操作步骤**
-1. 通过正常交互触发 Boss 战（不使用 DebugBossButton）
-2. 持续战斗直至 Boss HP 归零（或胜利条件达成）
+1. 点击 ChallengeBossButton 进入 BossFight（不使用 DebugBossButton）
+2. 使用 DebugDamage 扣血，直至 Boss HP 归零
 
 **预期结果**
-- Boss HP 下降，战斗流程可持续推进
+- 点击 Challenge Boss 不应直接触发 defeated
+- Boss HP 只会在 DebugDamage 时下降
 - Boss 被击败后自动进入胜利流程：
   - ThemeChoice 显示并置顶（不被卡牌遮挡）
   - BossPreview 状态更新（隐藏或显示 defeated）
