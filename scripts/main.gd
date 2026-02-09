@@ -9,6 +9,7 @@ extends Node
 @export var drop_pool: PackedStringArray = PackedStringArray(["wood_spear", "swamp_spirit", "swamp_mud"])
 @export var enemy_xp_reward: int = 3
 @export var theme_pool: PackedStringArray = PackedStringArray(["swamp", "city"])
+@export var debug_damage_enabled: bool = true
 
 @onready var board: Board = $Board
 @onready var hero_panel: HeroPanel = $UI/HeroPanel
@@ -22,6 +23,7 @@ extends Node
 @onready var debug_boss_button: Button = _find_button("DebugBossButton")
 @onready var challenge_boss_button: Button = get_node_or_null("UI/BossPreview/ChallengeBossButton") as Button
 @onready var debug_damage_button: Button = get_node_or_null("UI/HeroPanel/DebugDamage") as Button
+@onready var resolve_combat_button: Button = get_node_or_null("UI/HeroPanel/ResolveCombatButton") as Button
 
 const CARD_VIEW_SCENE: PackedScene = preload("res://scenes/cards/CardView.tscn")
 
@@ -44,7 +46,7 @@ func _ready() -> void:
 		hud.z_index = 100
 	theme_choice.z_index = 200
 	boss_preview.hide_boss()
-	_set_boss_button_enabled(false)
+	_refresh_combat_buttons()
 	_refresh_merge_rules_for_theme()
 	board.merge_happened.connect(_on_board_merge_happened)
 	board.spirit_terrain_happened.connect(_on_board_spirit_terrain_happened)
@@ -64,6 +66,10 @@ func _ready() -> void:
 		push_error("[Main] DebugDamage button not found. Check UI/HeroPanel/DebugDamage.")
 	else:
 		debug_damage_button.pressed.connect(_on_debug_damage_pressed)
+	if resolve_combat_button == null:
+		push_error("[Main] ResolveCombatButton not found. Check UI/HeroPanel/ResolveCombatButton.")
+	else:
+		resolve_combat_button.pressed.connect(_on_resolve_combat_pressed)
 	_setup_seed()
 	_update_debug_hud()
 	_spawn_initial_cards()
@@ -120,7 +126,7 @@ func _try_spawn_boss() -> void:
 		boss_spawned = true
 		boss_hp_current = boss_hp_max
 		_show_boss_preview()
-		_set_boss_button_enabled(true)
+		_refresh_combat_buttons()
 		print("[Main] Boss ready.")
 
 func _show_boss_preview() -> void:
@@ -130,6 +136,16 @@ func _show_boss_preview() -> void:
 func _set_boss_button_enabled(enabled: bool) -> void:
 	if challenge_boss_button != null:
 		challenge_boss_button.disabled = not enabled
+
+func _refresh_combat_buttons() -> void:
+	var can_challenge: bool = boss_spawned and not boss_defeated and not boss_fight_active
+	var can_resolve: bool = boss_fight_active and not boss_defeated
+	if challenge_boss_button != null:
+		challenge_boss_button.disabled = not can_challenge
+	if resolve_combat_button != null:
+		resolve_combat_button.disabled = not can_resolve
+	if debug_damage_button != null:
+		debug_damage_button.disabled = (not debug_damage_enabled) or (not can_resolve)
 
 func _spawn_one() -> void:
 	var card_id := _pick_weighted_id(theme.deck_weights)
@@ -276,7 +292,7 @@ func _on_challenge_boss_pressed() -> void:
 		boss_spawned = true
 		boss_hp_current = boss_hp_max
 		_show_boss_preview()
-		_set_boss_button_enabled(true)
+		_refresh_combat_buttons()
 	if not boss_spawned:
 		push_warning("[Main] ChallengeBoss ignored: boss not ready.")
 		return
@@ -286,40 +302,50 @@ func _on_challenge_boss_pressed() -> void:
 		boss_hp_current = boss_hp_max
 		boss_preview.set_boss_hp(boss_hp_current, boss_hp_max)
 	boss_fight_active = true
+	_refresh_combat_buttons()
+	print("[Main] Boss fight started.")
+
+func _on_resolve_combat_pressed() -> void:
+	if not boss_fight_active:
+		push_warning("[Main] ResolveCombat ignored: boss fight inactive.")
+		return
+	if boss_defeated:
+		return
+	_resolve_boss_round()
 
 func _on_debug_damage_pressed() -> void:
+	if not debug_damage_enabled:
+		push_warning("[Main] DebugDamage ignored: disabled.")
+		return
 	if not boss_fight_active:
 		return
 	boss_hp_current = max(boss_hp_current - 1, 0)
 	boss_preview.set_boss_hp(boss_hp_current, boss_hp_max)
+	print("[Main] DebugDamage applied. Boss HP:", boss_hp_current, "/", boss_hp_max)
 	if boss_hp_current <= 0:
-		boss_fight_active = false
 		_on_boss_defeated()
 
-func _resolve_boss_combat() -> void:
+func _resolve_boss_round() -> void:
 	var boss_atk: int = 1
 	var boss_def: int = 0
-	var hero_hp: int = hero_panel.hp
-	var boss_hp: int = boss_hp_current
-	while hero_hp > 0 and boss_hp > 0:
-		var hero_dmg: int = max(hero_panel.get_attack() - boss_def, 1)
-		boss_hp -= hero_dmg
-		if boss_hp <= 0:
-			break
-		var boss_dmg: int = max(boss_atk - hero_panel.get_defense(), 1)
-		hero_hp -= boss_dmg
-	boss_hp_current = max(boss_hp, 0)
-	hero_panel.hp = max(hero_hp, 0)
+	var hero_dmg: int = max(hero_panel.get_attack() - boss_def, 1)
+	boss_hp_current = max(boss_hp_current - hero_dmg, 0)
 	boss_preview.set_boss_hp(boss_hp_current, boss_hp_max)
+	print("[Main] ResolveCombat hit boss for", hero_dmg, "=>", boss_hp_current, "/", boss_hp_max)
 	if boss_hp_current <= 0:
 		_on_boss_defeated()
+		return
+	var boss_dmg: int = max(boss_atk - hero_panel.get_defense(), 1)
+	hero_panel.apply_damage(boss_dmg)
+	print("[Main] ResolveCombat boss retaliates for", boss_dmg)
 
 func _on_boss_defeated() -> void:
 	if boss_defeated:
 		return
 	boss_defeated = true
+	boss_fight_active = false
 	boss_preview.set_boss_hp(0, boss_hp_max)
-	_set_boss_button_enabled(false)
+	_refresh_combat_buttons()
 	_set_card_interaction_enabled(false)
 	_show_theme_choices()
 	print("[Main] Boss defeated.")
@@ -381,8 +407,9 @@ func debug_defeat_boss() -> void:
 	if boss_defeated:
 		return
 	boss_defeated = true
+	boss_fight_active = false
 	boss_preview.hide_boss()
-	_set_boss_button_enabled(false)
+	_refresh_combat_buttons()
 	_set_card_interaction_enabled(false)
 	_show_theme_choices()
 	print("[Main] Debug defeat boss triggered.")
@@ -439,6 +466,7 @@ func reset_run(theme_id: StringName) -> void:
 	boss_defeated = false
 	boss_hp_current = 0
 	boss_fight_active = false
+	_refresh_combat_buttons()
 	_setup_seed()
 	_update_debug_hud()
 	await get_tree().process_frame

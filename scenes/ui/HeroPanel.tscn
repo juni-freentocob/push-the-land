@@ -90,3 +90,11 @@ offset_bottom = -41.5
 grow_horizontal = 0
 grow_vertical = 2
 text = "DebugDamage"
+
+[node name="ResolveCombatButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 1157.0
+offset_top = 390.0
+offset_right = 1290.0
+offset_bottom = 421.0
+text = "Resolve Combat"

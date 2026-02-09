@@ -170,15 +170,35 @@
 - M1.1 decisions, schema, and scene tree notes updated
 - Test plan maintained as docs/TEST_PLAN_M1_1.md
 
-### M2 — Theme branching (3 boxes) + multiple themes (City / Swamp / Sanctuary)
+### M2 – Theme branching (3 boxes) + multiple themes (City / Swamp / Sanctuary)
 **Scope**
 - Real theme switching and deck definition per theme.
 **Deliverables**
-- ThemeDef Resources for 3 themes
-- ThemeChoice loads next level with selected theme
-- Theme-bound visuals (background/card frame) minimal
+- T14: Combat resolution entrypoint formalization (replace DebugDamage as main path) – DONE
+- T15: Card type/enemy recognition formalization (CardDef.kind first) – TODO
+- T16: Theme/Card/MergeRule registry-resolver loading layer – TODO
+- T17: Startup validator for deck/rule/reference integrity – TODO
+- T18: Unified state machine + logging standard – TODO
+- T19: M2 regression suite + TEST_PLAN_M2 – TODO
 **Acceptance**
-- Completing a level leads to 3 choices; each loads different theme with different deck mix
+- System-first baseline is extensible, verifiable, and maintainable
+- Hardcoded paths/theme/enemy checks are removed or isolated behind resolver/validator/state machine
+
+**M2 Overview (T14..T19)**
+- T14 Goal: Boss/enemy HP changes only via formal combat resolver; DebugDamage becomes debug-only.
+- T15 Goal: Replace suffix-based enemy checks with CardDef.kind-based recognition (with migration compatibility).
+- T16 Goal: Introduce unified data loading entry (Theme/Card/MergeRule registry/resolver).
+- T17 Goal: Validate theme_pool/deck_weights/merge_rule_paths/resource references at startup with readable errors.
+- T18 Goal: Unify RunState/BossState/InteractionLock and normalize log format.
+- T19 Goal: Add TEST_PLAN_M2 and define mandatory regression checks per task.
+
+**T14 Completion**
+- Added `ResolveCombatButton` as the formal boss combat entrypoint.
+- `ChallengeBossButton` now only transitions to BossFight and does not apply damage.
+- Boss HP changes in main flow only via `_on_resolve_combat_pressed() -> _resolve_boss_round()`.
+- `DebugDamage` remains debug-only and is gated by `debug_damage_enabled`.
+- Combat button states are centrally managed by `_refresh_combat_buttons()`.
+- Logs now track: Boss ready -> Boss fight started -> ResolveCombat damage -> Boss defeated.
 
 ### M3 — Spirits + Terrain => Enemy; Spirit + Spirit => Elite Spirit
 **Scope**
@@ -235,6 +255,7 @@
 - 2026-02-03: Theme switch stability: on_theme_chosen -> reset_run(theme_id) only; reset_run performs forced multi-source cleanup and HUD 0/100-before-spawn sequencing.
 - 2026-02-03: City theme normalization: city_theme deck and outputs use city_* resources; `swamp_*` references are disallowed in city deck_weights.
 - 2026-02-03: MergeRule loading is theme-containerized via ThemeDef.merge_rule_paths; default path in Main is fallback only.
+- 2026-02-09: T14 combat formalization: ChallengeBoss only starts BossFight; ResolveCombatButton is the main HP reducer; DebugDamage is debug-only (`debug_damage_enabled`).
 
 ## 6. Debug/Test strategy
 - Deterministic RNG seed toggle

@@ -71,12 +71,28 @@ T8 (MVP combat + rewards)
 
 ## Boss Combat (M1.1)
 - Challenge Boss does not resolve combat; it only enters BossFight state
-- DebugDamage is the only HP reducer (temporary tool; will be replaced by real combat ticks/animation)
+- ResolveCombatButton is the formal combat entrypoint and applies one combat round per click
+- DebugDamage is debug-only (gated by `debug_damage_enabled`)
 - ThemeChoice appears only when Boss HP <= 0
 - M1.1 validates the state machine, not combat balance or pacing
 
 ## Next Steps (Planned)
-- M2: Theme branching (3 boxes) + multiple themes
+- M2 (system-first): T14..T19 execution in order
+
+## M2 Plan (System-first)
+- T14: Combat resolution entrypoint formalization (DebugDamage demoted to debug tool) — DONE
+- T15: Enemy/type recognition migration to CardDef.kind
+- T16: Data registry/resolver for Theme/Card/MergeRule loading
+- T17: Startup validator (theme/deck/rule/reference integrity)
+- T18: Unified RunState/BossState/InteractionLock + log format
+- T19: Regression suite and TEST_PLAN_M2 rollout
+
+## M2 Progress
+- T14 DONE:
+- ChallengeBossButton only transitions state into BossFight.
+- Boss HP changes in normal flow only through ResolveCombatButton -> `_resolve_boss_round`.
+- DebugDamage remains available for debug-only damage injection.
+- Buttons are state-driven by `_refresh_combat_buttons` to avoid invalid interactions.
 
 ## M1.1 Status
 - T9: Boss real loop (no DebugBossButton dependency) — DONE

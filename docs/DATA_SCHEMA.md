@@ -125,3 +125,18 @@ XP rules (MVP):
 - Kill: +3 XP
 Placement:
 - Drops spawn into OverflowArea (stacked)
+
+## 10) M2 planned runtime contracts
+- CombatResolver entrypoint:
+  - All boss/enemy HP updates should flow through one resolver function.
+  - T14 implementation: `ResolveCombatButton` -> `_on_resolve_combat_pressed()` -> `_resolve_boss_round()`.
+  - `ChallengeBossButton` is state transition only (BossReady -> BossFight), no direct damage.
+  - DebugDamage remains optional debug-only utility (`debug_damage_enabled`).
+- Enemy/type recognition:
+  - Target rule: CardDef.kind-based branching.
+  - Temporary compatibility may keep suffix-based fallback during migration.
+- Data loading:
+  - Theme/Card/MergeRule references should be loaded through a single resolver/registry layer.
+  - merge_rule_paths (ThemeDef) is preferred; Main fallback path is compatibility-only.
+- Validation:
+  - Startup checks should validate theme_pool, deck_weights ids, merge_rule_paths, and missing resources.

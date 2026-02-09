@@ -16,5 +16,4 @@ boss_id = &"swamp_boss"
 output_remap = {
 "swamp_enemy": "swamp_enemy"
 }
-merge_rule_paths = PackedStringArray("res://data/merge/swamp_rules.tres")
 metadata/_custom_type_script = "uid://dqwmvf0u14jkh"

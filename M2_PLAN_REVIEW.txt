@@ -1,0 +1,611 @@
+﻿[FILE: PLANS.md]
+# PushTheLand 鈥?Execution Plan (Godot 4)
+
+## 0. Project snapshot
+- Engine: Godot 4.x (GDScript 2.0 typed)
+- Core presentation: square grid board (usually 9x9, sometimes smaller; max 9x9)
+- Core loop per level: **spawn 100 themed cards in random order 鈫?Boss appears 鈫?defeat Boss 鈫?choose next theme (3 card boxes)**
+- Key interaction: **drag & drop cards** across board / hero panel / trash zone
+- Strategy layer: boss preview at level start (name, skills, weakness)
+
+## 1. Game pillars
+1) Drag-centric tactile gameplay (fast, readable, low-friction)
+2) Data-driven content (themes/cards/merge rules via Resources; add content without code)
+3) Strategy: boss preview + targeted merges/equipment planning
+4) Replayability: branching theme choice, different playstyles (build/trap/solo)
+
+## 2. Systems breakdown (high level)
+### Board & Placement
+- Grid occupancy model (cell coords -> placed card instance)
+- Visual grid (9x9 default; support NxN <= 9)
+- Hover highlight: show all mergeable partners for the hovered card
+
+### Cards
+- Card types:
+  - Terrain component
+  - Spirit
+  - Equipment (weapon/armor/trinket)
+  - Utility/Item (optional later)
+  - Enemy card (generated result, not in base deck)
+- Drag behaviors:
+  - Drop on board cell: place or attempt merge
+  - Drop on hero panel: equip or trigger combat (enemy)
+  - Drop on trash zone: delete -> small XP
+
+### Merge & Recipes
+- Merge rule engine (data-driven):
+  - card + card -> new card (upgrade / terrain completion / elite spirit)
+  - spirit + spirit -> elite spirit
+  - terrain components -> complete terrain
+- UX: when hover card A, highlight all cards that can merge with A (by rule lookup)
+
+### Hero & Progression
+- Hero exists outside board (UI panel)
+- Stats: HP, ATK, DEF
+- XP sources: kill enemies, trash cards, objectives
+- Level-up: stats grow; unlock talent/passive slots (later)
+
+### Spirits -> Enemies (Dynamic)
+- spirit + complete terrain -> enemy (terrain-specific)
+- elite spirit + complete terrain -> elite enemy (harder, better drops)
+
+### Enemy & Combat (MVP first)
+- Minimal combat for slice: when combat triggers, resolve damage ticks until one side dies
+- Drop + XP reward on victory
+
+### Level & Theme flow
+- Level start: Boss preview UI
+- Spawn 100 cards according to theme deck list
+- Boss spawns after 100
+- After boss defeat: ThemeChoice (3 card boxes) -> load next theme
+
+## 3. Milestones
+
+### M0 鈥?Foundation (Project skeleton + docs)
+**Scope**
+- Create core scenes, baseline scripts, Resource schemas, debug utilities.
+**Deliverables**
+- docs/GDD.md, docs/DATA_SCHEMA.md, docs/SCENE_TREE.md (initial)
+- res://scenes/Main.tscn (boot)
+- res://scenes/Board.tscn, res://scenes/ui/HeroPanel.tscn, TrashZone.tscn, BossPreview.tscn, ThemeChoice.tscn
+- Base scripts under res://scripts/...
+**Acceptance**
+- Project runs to Main; board & UI panels visible
+- Debug overlay can show: RNG seed, spawned count, board occupancy count
+**Verification**
+- Run Main scene; confirm UI zones exist and respond to placeholder interactions
+**Risks**
+- Over-engineering early. Mitigation: keep M0 minimal and support M1 only.
+
+### M1 鈥?Vertical Slice (Swamp theme) 鈥?complete 100 cards -> Boss -> Victory -> ThemeChoice (DONE; T3 DONE, T4 DONE, T5 DONE, T6 DONE, T7 DONE, T8 DONE)
+**Scope**
+- Implement full loop for a single theme (Swamp) with minimal but playable rules.
+**Deliverables**
+- Card spawning system (100 cards random order from theme deck)
+- Drag & drop: board place, hero equip, trash delete (T3 DONE)
+- Merge rules (>= 3 recipes), hover highlight mergeable partners (T4 DONE: data schema + 1 MVP rule)
+- Boss preview (static data)
+- Boss spawn after 100, minimal combat, win condition
+- ThemeChoice UI (3 boxes) placeholder navigation
+**T7 Completion**
+- BossPreview shows name/weakness/skills (placeholder data)
+- Boss spawn placeholder after 100 cards: "Boss spawned (placeholder)"
+- ThemeChoice flow: Debug button triggers boss defeat -> 3 buttons -> selection hides UI
+- UI fixes: ThemeChoice path (VBoxContainer/BoxA|BoxB|BoxC), z_index on top, DebugBossButton wired
+**T8 Completion**
+- Combat (placeholder): drag swamp_enemy to HeroPanel triggers simple turn-based damage, HP decreases, win grants XP
+- Equipment: drag wood_spear to HeroPanel, ATK +1, card removed
+- Trash: drag card to TrashZone, XP +1, card removed
+- UI: HP/ATK/DEF/XP labels update live
+- Stability: removed cards also removed from Board.occupancy
+**T6 Completion**
+- MergeRule data-driven, order-insensitive matching
+- Merge logic: occupied-cell match merges into swamp_enemy
+- Hover: mergeable highlights, drag locks highlight source, dragged card not highlighted
+- Stability: initial occupancy registered, same-card merge fixed, drag z-order on top
+- Overflow: cards beyond 9x9 go to OverflowArea, do not block BossPreview/ThemeChoice
+**T5 Completion**
+- Theme-driven spawn: Main reads ThemeDef.deck_weights, spawns 100 cards by weight
+- Deterministic RNG: fixed seed or system-time seed modes
+- DebugHUD: Seed, Theme, Spawned (overlap fixed)
+- Spawn layout: first board_size*board_size cards placed on grid; extras stacked
+- Stability fixes: DebugHUD null-safe; CardView interactive rect matches visual size
+**Acceptance**
+- Player can finish a run: place/merge/trash/equip; boss appears; defeat boss; reach ThemeChoice
+**Verification**
+- Start run with deterministic seed; confirm boss spawns exactly after 100th card
+- Confirm merge highlight matches rule set
+- Confirm trash gives XP and updates hero UI
+**T3 Completion**
+- Logical grid (board_size/cell_size)
+- Placement + occupancy (snap, same-cell reject, out-of-bounds reject)
+- Repositioning placed cards
+- Drag flow: manual drag + CardLayer dispatch
+- GridVisual debug rendering enabled
+**T4 Completion**
+- Resource scripts: CardDef / ThemeDef / MergeRule (typed GDScript, class_name registered)
+- Swamp data: swamp_spirit (SPIRIT), swamp_mud (TERRAIN_PART), wood_spear (EQUIPMENT with atk_bonus)
+- swamp_theme.tres: deck_weights set, boss_id placeholder
+- swamp_rules.tres: 1 MVP rule (spirit + mud -> swamp_enemy)
+- MissingResource/class_name registration issue resolved (Inspector editable)
+**Risks**
+- Drag UX is fiddly. Mitigation: snapping, clear drop zones, hover preview.
+
+### M1.1 鈥?Swamp VS reinforcement (DONE; T9鈥揟13)
+**Scope**
+- Close remaining loop gaps for boss flow, spirit+terrain main path, drops/growth, and real theme switch.
+**Deliverables**
+- T9: Boss real loop (no DebugBossButton dependency) 鈥?DONE
+- T10: Spirit + terrain -> enemy as main path 鈥?DONE
+- T11: Drop + growth loop to make boss winnable 鈥?DONE
+- T12: ThemeChoice leads to a real new round 鈥?DONE
+- T13: Docs + verification updates 鈥?DONE
+**T9 Completion**
+- 100 cards -> BossReady, BossPreview shows boss info + BossHP
+- ChallengeBossButton triggers boss combat (no DebugBossButton required)
+- BossHP reaches 0 -> ThemeChoice auto shows and stays above cards
+- ThemeChoice locks card drag; interaction resumes after selection
+- BossPreview hides after victory (0/Max visible before choice)
+**T10 Completion**
+- Drag swamp_spirit onto complete swamp terrain spawns swamp_enemy (main path)
+- Hover highlight shows spirit + complete terrain trigger
+- spirit + swamp_mud still generates swamp_enemy via MergeRule (intended coexistence)
+**T11 Completion**
+- Fixed drop pool: wood_spear / swamp_spirit / swamp_mud
+- Killing swamp_enemy drops 1 card into OverflowArea (stacked)
+- Kill XP = +3 (greater than Trash XP +1)
+- UI + occupancy update correctly
+**T12 Completion**
+- ThemeChoice buttons return real theme_id (no hardcoded ids)
+- Selecting a theme clears Board/OverflowArea, resets spawned/boss state, then re-generates
+- Theme source: theme.next_theme_pool (preferred) or default theme_pool fallback
+- Added city_theme placeholder for switching validation
+- DebugHUD shows 0/100 on reset before spawning begins
+- on_theme_chosen -> reset_run(theme_id) is the single reset entrypoint
+- reset_run order is fixed: spawned_count=0 + HUD refresh -> await frame(s) -> spawn
+- reset_run uses _clear_all_cards() across group/CardLayer/OverflowArea/Board OccupancyLayer to avoid leaked cards
+- Theme data must be self-consistent (city_theme deck_weights must point to city_* cards, not swamp_*)
+- Enemy recognition is generic (suffix `_enemy`), not hardcoded `swamp_enemy`
+- MergeRule source is theme-scoped: ThemeDef.merge_rule_paths first, fallback to Main.merge_rules_path
+**T13 Completion**
+- M1.1 decisions, schema, and scene tree notes updated
+- Test plan maintained as docs/TEST_PLAN_M1_1.md
+
+### M2 鈥?Theme branching (3 boxes) + multiple themes (City / Swamp / Sanctuary)
+**Scope**
+- Real theme switching and deck definition per theme.
+**Deliverables**
+- T14: Combat resolution entrypoint formalization (replace DebugDamage as main path) 鈥?TODO
+- T15: Card type/enemy recognition formalization (CardDef.kind first) 鈥?TODO
+- T16: Theme/Card/MergeRule registry-resolver loading layer 鈥?TODO
+- T17: Startup validator for deck/rule/reference integrity 鈥?TODO
+- T18: Unified state machine + logging standard 鈥?TODO
+- T19: M2 regression suite + TEST_PLAN_M2 鈥?TODO
+**Acceptance**
+- System-first baseline is extensible, verifiable, and maintainable
+- Hardcoded paths/theme/enemy checks are removed or isolated behind resolver/validator/state machine
+
+**M2 Overview (T14..T19)**
+- T14 Goal: Boss/enemy HP changes only via formal combat resolver; DebugDamage becomes debug-only.
+- T15 Goal: Replace suffix-based enemy checks with CardDef.kind-based recognition (with migration compatibility).
+- T16 Goal: Introduce unified data loading entry (Theme/Card/MergeRule registry/resolver).
+- T17 Goal: Validate theme_pool/deck_weights/merge_rule_paths/resource references at startup with readable errors.
+- T18 Goal: Unify RunState/BossState/InteractionLock and normalize log format.
+- T19 Goal: Add TEST_PLAN_M2 and define mandatory regression checks per task.
+
+### M3 鈥?Spirits + Terrain => Enemy; Spirit + Spirit => Elite Spirit
+**Scope**
+- Replace placeholder enemy generation with the designed dynamic system.
+**Deliverables**
+- Complete terrain state recognition from components
+- Spirit->Enemy conversion rules per terrain
+- Elite spirit + terrain -> elite enemy
+**Acceptance**
+- Player can intentionally create enemies via spirit + terrain, and gain rewards
+
+### M4 鈥?Hero progression + objectives
+**Scope**
+- XP/level system, simple objectives.
+**Deliverables**
+- XP curve, leveling, stats growth, objective definitions
+**Acceptance**
+- Player can level within a run; stats meaningfully affect combat
+
+### M5 鈥?Playstyle enablers (Build / Trap / Solo) 鈥?1 representative mechanic each
+**Scope**
+- Make three approaches viable.
+**Deliverables**
+- City: defensive building or aura (tower / buff)
+- Trap: poison/floor spike
+- Solo: equipment rarity + simple affixes
+**Acceptance**
+- Each playstyle can beat boss with different strategy
+
+### M6 鈥?Content pipeline + polish
+- Save/progression, balancing, FX/SFX, performance, content authoring docs
+
+## 4. Backlog (nice-to-have)
+- Replay system (record input + seed)
+- Tutorials / hinting
+- Accessibility options (snap strength, colorblind highlights)
+- More bosses and theme-specific mechanics
+
+## 5. Decisions log
+- 2026-01-20: Default branch is master; remote uses SSH for GitHub push stability.
+- 2026-01-20: Use manual drag (CardView _gui_input/_process) + CardLayer hit dispatch; avoid Control drag/drop due to CanvasLayer/mouse filter/hit issues blocking drop targets.
+- 2026-01-20: Drop hit-testing uses visible ColorRect areas (HeroPanel/TrashZone) to avoid root Control size mismatches; dispatch priority is TrashZone > HeroPanel > Board via accept_drop/can_accept_drop.
+- 2026-01-20: Placement snap is center-to-center (card center aligns to cell center).
+- 2026-01-20: GridVisual is debug-only visualization; future art can replace without changing logic.
+- 2026-01-20: T4 resources and .tres data landed; boss_id and swamp_enemy are placeholders for T7/T8.
+- 2026-01-20: RNG supports fixed seed or system-time seed for reproducible spawns (configured in Main export vars).
+- 2026-02-03: Boss flow no longer depends on DebugBossButton; ChallengeBossButton starts combat and boss defeat auto-opens ThemeChoice.
+- 2026-02-03: ThemeChoice locks card drag while visible (input lock strategy).
+- 2026-02-03: Spirit + complete terrain is the main enemy-generation path; MergeRule spirit+mud remains for now.
+- 2026-02-03: Kill XP > Trash XP (MVP: +3 vs +1) and enemy drops come from a fixed drop_pool.
+- 2026-02-03: ThemeChoice selection resets run state and restarts spawning; next_theme_pool preferred, else Main.theme_pool fallback.
+- 2026-02-03: Tested delayed spawn hook for ChallengeBoss validation; removed afterward, but may reintroduce for future spawn pacing/animation.
+- 2026-02-03: Boss combat is non-simulated in M1.1: ChallengeBoss enters fight state, DebugDamage is the only HP reducer, and ThemeChoice triggers only when HP<=0.
+- 2026-02-03: Theme switch stability: on_theme_chosen -> reset_run(theme_id) only; reset_run performs forced multi-source cleanup and HUD 0/100-before-spawn sequencing.
+- 2026-02-03: City theme normalization: city_theme deck and outputs use city_* resources; `swamp_*` references are disallowed in city deck_weights.
+- 2026-02-03: MergeRule loading is theme-containerized via ThemeDef.merge_rule_paths; default path in Main is fallback only.
+
+## 6. Debug/Test strategy
+- Deterministic RNG seed toggle
+- Debug HUD: spawned count, boss state, board occupancy, current theme
+- Event log: spawn, place, merge, delete, combat start/end
+
+## Release Note (M1)
+- M1 and M1.1 are complete and validated end-to-end.
+- Core loop is playable: spawn 100 cards -> boss phase -> defeat -> ThemeChoice -> next run.
+- Drag/drop stack is stable with manual CardView motion and CardLayer hit dispatch.
+- Board placement supports occupancy checks, out-of-bounds rejection, and center snap.
+- OverflowArea now contains overflow cards to keep gameplay UI readable.
+- Merge supports both rule-based recipes and spirit+complete-terrain main path.
+- Theme switch uses on_theme_chosen -> reset_run(theme_id) as single reset protocol.
+- reset_run forces multi-source cleanup and shows HUD 0/100 before re-spawn.
+- Theme content is now split: swamp_* and city_* decks/resources are both available.
+- Merge rule loading is theme-scoped via ThemeDef.merge_rule_paths, with Main fallback path.
+- Boss flow is state-machine focused in M1.1: ChallengeBoss enters fight state, DebugDamage reduces HP, ThemeChoice appears at HP<=0.
+- Known limitation: combat pacing/balance and full animated battle ticks are not implemented yet.
+
+[FILE: docs/STATE.md]
+# PushTheLand 鈥?State Snapshot
+
+## Index
+- M1.1 测试计划 -> docs/TEST_PLAN_M1_1.md
+
+
+## Current Status (T1鈥揟8)
+T1 (Project skeleton)
+- Main/Board/UI scenes in place
+- Scripts wired with basic logging and signals
+
+T2 (Drag & drop baseline)
+- Manual drag (CardView _gui_input/_process) implemented
+- CardLayer dispatches drop by hit-testing UI ColorRect areas
+- Targets implement accept_drop(card_view) and optional can_accept_drop(card_view)
+
+T3 (Board placement + GridVisual)
+- Logical grid: board_size/cell_size
+- Placement + occupancy: snap, same-cell reject, out-of-bounds reject
+- Repositioning placed cards supported
+- Drag flow unchanged (manual drag + CardLayer dispatch)
+- GridVisual debug rendering (border, grid lines, hover cell)
+
+T4 (Resources + Swamp data)
+- Resource scripts: CardDef / ThemeDef / MergeRule (typed + class_name)
+- Swamp data: swamp_spirit (SPIRIT), swamp_mud (TERRAIN_PART), wood_spear (EQUIPMENT with atk_bonus)
+- swamp_theme.tres: deck_weights set; boss_id placeholder
+- swamp_rules.tres: 1 MVP rule (spirit + mud -> swamp_enemy)
+- MissingResource/class_name issues resolved (Inspector editable)
+
+T5 (Spawner + RNG + DebugHUD)
+- Theme-driven spawn (ThemeDef.deck_weights)
+- Deterministic RNG (fixed seed or system time)
+- DebugHUD shows seed/theme/spawned count
+- Spawn layout: first grid cells; extras stacked in OverflowArea
+
+T6 (Merge + Hover + Overflow)
+- MergeRule data-driven; order-insensitive match
+- Merge generates swamp_enemy MVP output
+- Hover highlight stable during drag; dragged card not highlighted
+- OverflowArea holds cards beyond 9x9, avoids UI blocking
+
+T7 (BossPreview + ThemeChoice)
+- BossPreview shows name/weakness/skills (placeholder)
+- Boss spawn placeholder after 100 cards
+- DebugBossButton triggers boss defeat and ThemeChoice
+- ThemeChoice selection hides UI
+- Boss spawn is a state event only; combat remains placeholder
+
+T8 (MVP combat + rewards)
+- Trash rewards: drop card in TrashZone -> XP +1
+- Equipment: drop wood_spear in HeroPanel -> ATK +1
+- Combat: drop swamp_enemy in HeroPanel -> HP down, XP +3 (from +2, M1.1/T11)
+- UI stats (HP/ATK/DEF/XP) update live
+
+## Key Decisions
+- Manual drag/drop only (no Control drag/drop APIs)
+- Drop priority: TrashZone > HeroPanel > Board
+- Placement snap: center-to-center (card center to cell center)
+- GridVisual is debug-only; visuals can be replaced without changing logic
+- T4 resources and .tres data are in place; boss_id and swamp_enemy are placeholders
+- RNG is configurable via Main export vars (fixed seed or system time)
+
+## Current Implementation Notes
+- Board placement uses occupancy map keyed by Vector2i cells
+- CardView can be reparented to Board/OccupancyLayer and remain draggable
+- CardLayer hit-tests ColorRect bounds for UI drops
+- Boss flow: BossReady -> BossFight -> BossDefeated -> ThemeChoice -> NextRun
+- 81-grid limit enforced; OverflowArea holds extra cards
+- MVP simplifications: MergeRule.consume_inputs/output_count not used; combat is simple loop
+
+## Boss Combat (M1.1)
+- Challenge Boss does not resolve combat; it only enters BossFight state
+- DebugDamage is the only HP reducer (temporary tool; will be replaced by real combat ticks/animation)
+- ThemeChoice appears only when Boss HP <= 0
+- M1.1 validates the state machine, not combat balance or pacing
+
+## Next Steps (Planned)
+- M2 (system-first): T14..T19 execution in order
+
+## M2 Plan (System-first)
+- T14: Combat resolution entrypoint formalization (DebugDamage demoted to debug tool)
+- T15: Enemy/type recognition migration to CardDef.kind
+- T16: Data registry/resolver for Theme/Card/MergeRule loading
+- T17: Startup validator (theme/deck/rule/reference integrity)
+- T18: Unified RunState/BossState/InteractionLock + log format
+- T19: Regression suite and TEST_PLAN_M2 rollout
+
+## M1.1 Status
+- T9: Boss real loop (no DebugBossButton dependency) — DONE
+- T10: Spirit + terrain -> enemy as main path — DONE
+- T11: Drop + growth loop to make boss winnable — DONE
+- T12: ThemeChoice leads to a real new round — DONE
+- T13: Docs + verification updates — DONE
+- Step3 (Theme switch reliability + city normalization) — DONE
+
+## Milestone Status
+- M1: DONE
+- M1.1 (T9~T13): DONE
+
+## Recent Decisions (M1.1)
+- Boss no longer depends on DebugBossButton; ChallengeBossButton drives combat.
+- ThemeChoice locks card drag until a choice is made.
+- Main path (spirit + complete terrain) is enabled; MergeRule spirit+mud stays for now.
+- Drops go to OverflowArea by default to avoid board crowding.
+- Theme switch clears board, resets counts, and re-spawns; city_theme added as placeholder.
+- reset_run is the only theme-switch reset entrypoint and must show HUD 0/100 before re-spawn.
+- Theme rules are containerized by ThemeDef.merge_rule_paths (Main path is fallback).
+
+## Verification Checklist (Current)
+- Drag card to HeroPanel: prints accept_drop log
+- Drag card to TrashZone: prints accept_drop log
+- Drag card to Board: snaps to grid center
+- Drag card to occupied cell: rejected and returns to original
+- GridVisual visible: border, grid lines, hover cell
+
+## Step3 Snapshot
+- ThemeChoice -> City now clears old cards from Board + OverflowArea + CardLayer reliably.
+- HUD shows 0/100 before next-round spawn.
+- Theme is switched and spawn uses city_* deck entries.
+- Added city resources: city_mud, city_spirit, city_terrain_complete, city_enemy, city_rules.
+- output_remap is active (theme output mapping such as swamp_enemy -> city_enemy).
+- merge_rule_paths is active in ThemeDef (theme first, Main fallback).
+
+[FILE: docs/DATA_SCHEMA.md]
+# Data Schema (Godot 4 Resources)
+
+## 1) CardDef (res://data/cards/CardDef.gd)
+Represents a card type (not an instance).
+Fields (suggested):
+- id: StringName (unique)
+- display_name: String
+- kind: enum { TERRAIN_PART, SPIRIT, EQUIPMENT, JUNK, GENERATED_ENEMY }
+- rarity: enum { COMMON, UNCOMMON, RARE, EPIC, LEGENDARY } (optional for MVP)
+- icon: Texture2D (optional early)
+- theme_tags: PackedStringArray (e.g., ["swamp"])
+- stackable: bool (usually false)
+- equipment_slot: enum { NONE, WEAPON, ARMOR, TRINKET } (only for EQUIPMENT)
+- stats: Dictionary or dedicated Resource (e.g., atk_bonus, def_bonus, hp_bonus)
+- terrain_part: TerrainPartRef? (links to terrain assembly; only for TERRAIN_PART)
+- spirit_tier: enum { NORMAL, ELITE } (only for SPIRIT)
+CardKind values:
+- TERRAIN_PART
+- SPIRIT
+- EQUIPMENT
+- JUNK
+- GENERATED_ENEMY
+Notes:
+- atk_bonus lives in stats for EQUIPMENT (e.g., {"atk_bonus": 1})
+
+## 2) MergeRule (res://data/merge/MergeRule.gd)
+A single recipe rule.
+Fields:
+- id: StringName
+- inputs: Array[StringName]  (2 card ids; order-insensitive)
+- output: StringName         (card id)
+- consume_inputs: bool = true
+- output_count: int = 1
+- notes: String
+Notes:
+- inputs are order-insensitive
+- swamp_enemy is MVP merge output placeholder (T7/T8 will map to real EnemyDef/combat)
+Interaction rules:
+- Main path: SPIRIT + complete TERRAIN -> ENEMY
+- Component merge: apply MergeRule (order-insensitive) for specific recipes
+- If both could apply, main path takes priority over MergeRule
+
+## 3) TerrainDef (res://data/terrains/TerrainDef.gd)
+Defines a complete terrain type.
+Fields:
+- id: StringName
+- display_name: String
+- required_parts: Array[StringName] (card ids for components)
+- theme_tags: PackedStringArray
+- passive_effect_id: StringName (optional)
+- enemy_table_id: StringName (maps spirit->enemy)
+Notes:
+- Complete terrain can be flagged via CardDef.stats["complete_terrain"]=true
+
+## 4) SpiritDef (optional separate; or encode on CardDef kind=SPIRIT)
+If separate:
+- id: StringName
+- tier: NORMAL/ELITE
+- theme_tags
+- base_modifiers (optional)
+
+## 5) EnemyDef (res://data/enemies/EnemyDef.gd)
+Fields:
+- id: StringName
+- display_name: String
+- max_hp: int
+- atk: int
+- def: int
+- weakness: StringName (e.g., "holy", "fire") (for MVP: string)
+- loot_table_id: StringName (optional)
+- xp_reward: int
+
+## 6) BossDef (can reuse EnemyDef with is_boss flag)
+Fields:
+- enemy_id: StringName (EnemyDef)
+- portrait: Texture2D (optional)
+- skills: PackedStringArray (strings for MVP)
+- weakness: StringName
+
+## 7) ThemeDef (res://data/themes/ThemeDef.gd)
+Fields:
+- id: StringName
+- display_name: String
+- deck: Array[StringName] (list of CardDef ids; for MVP we can generate 100 from weights)
+- deck_weights: Dictionary[StringName, int] (card_id -> weight; keys must match card resource ids for that theme)
+- boss_id: StringName (BossDef or EnemyDef id)
+- output_remap: Dictionary[StringName, StringName] (theme-specific output mapping, e.g. swamp_enemy -> city_enemy)
+- merge_rule_paths: PackedStringArray (theme-specific MergeRule resource paths)
+- visuals: Dictionary (background, card_frame, tint) (optional early)
+- next_theme_pool: Array[StringName] (optional; controls what appears in 3 boxes)
+Notes:
+- RNG seed config lives in Main export vars (fixed or system-time)
+ThemeChoice mapping:
+- Buttons return theme_id (no hardcoded ids)
+- Theme selection priority: next_theme_pool (if non-empty) else theme_pool (fallback)
+MergeRule loading priority:
+- ThemeDef.merge_rule_paths first
+- Fallback to Main.merge_rules_path only when theme does not provide paths
+
+## 7.1) Theme pool (runtime)
+Fields:
+- theme_pool: PackedStringArray (fallback theme ids)
+Location:
+- Main.theme_pool export var
+
+## 8) Runtime instance (not a Resource)
+CardInstance:
+- def_id: StringName
+- instance_id: int
+- state (e.g., placed coords, durability) if needed
+Enemy recognition (current runtime rule):
+- `String(def_id).ends_with("_enemy")`
+- Future recommendation: switch to explicit CardDef kind/enemy flag for stronger typing
+
+## 9) Drop Pool (MVP runtime config)
+Fixed list used for enemy drops (not a Resource yet).
+Structure:
+- drop_pool: PackedStringArray of CardDef ids
+Current pool:
+- wood_spear
+- swamp_spirit
+- swamp_mud
+XP rules (MVP):
+- Trash: +1 XP
+- Kill: +3 XP
+Placement:
+- Drops spawn into OverflowArea (stacked)
+
+## 10) M2 planned runtime contracts
+- CombatResolver entrypoint:
+  - All boss/enemy HP updates should flow through one resolver function.
+  - DebugDamage remains optional debug-only utility.
+- Enemy/type recognition:
+  - Target rule: CardDef.kind-based branching.
+  - Temporary compatibility may keep suffix-based fallback during migration.
+- Data loading:
+  - Theme/Card/MergeRule references should be loaded through a single resolver/registry layer.
+  - merge_rule_paths (ThemeDef) is preferred; Main fallback path is compatibility-only.
+- Validation:
+  - Startup checks should validate theme_pool, deck_weights ids, merge_rule_paths, and missing resources.
+
+[FILE: docs/TEST_PLAN_M2.md]
+# M2 Test Plan (System-first Regression)
+
+This plan tracks M2 tasks T14..T19 and defines the minimum regression checks that must pass before each merge.
+
+## Scope
+- Replace hardcoded gameplay/control paths with maintainable runtime contracts.
+- Keep M1 playable loop stable while migrating system boundaries.
+
+## Task Matrix
+- T14: Combat resolution entrypoint formalization
+- T15: Enemy/type recognition migration to CardDef.kind
+- T16: Data registry/resolver loading layer
+- T17: Startup validator and readable error reporting
+- T18: Unified state machine and logging format
+- T19: Regression suite completion and handoff
+
+## T14 Verify
+Preconditions:
+- BossReady reached.
+Actions:
+1. Click Challenge Boss.
+2. Trigger combat resolution entry repeatedly.
+Expected:
+- Challenge Boss does not directly defeat boss.
+- HP changes only through combat resolver entry.
+- DebugDamage is optional debug-only path.
+
+## T15 Verify
+Preconditions:
+- Swamp and City themes both available.
+Actions:
+1. Spawn and drag enemy cards from both themes to HeroPanel.
+Expected:
+- Enemy recognition works without id suffix dependency as primary path.
+- Migration fallback behavior documented if present.
+
+## T16 Verify
+Preconditions:
+- Resolver/registry enabled.
+Actions:
+1. Switch theme and run spawn/merge paths.
+2. Break one resource path intentionally.
+Expected:
+- Runtime loads via resolver.
+- Missing resource error is explicit and references file/field.
+
+## T17 Verify
+Preconditions:
+- Validator runs at startup.
+Actions:
+1. Inject invalid card_id in deck_weights.
+2. Inject invalid merge_rule_paths entry.
+Expected:
+- Validator reports readable errors in Output/HUD.
+- Fixes remove errors on next run.
+
+## T18 Verify
+Preconditions:
+- Unified state machine active.
+Actions:
+1. Run full loop: Spawn -> BossReady -> BossFight -> BossDefeated -> ThemeChoice -> NextRun.
+Expected:
+- State transitions are logged with normalized format.
+- ThemeChoice open locks interaction; close unlocks.
+
+## T19 Verify
+Actions:
+1. Execute T14..T18 verify list in sequence.
+2. Record pass/fail and residual risks.
+Expected:
+- All critical regressions pass.
+- Known limitations are documented in STATE/PLANS.
+
