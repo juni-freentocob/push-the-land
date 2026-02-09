@@ -86,6 +86,10 @@ T8 (MVP combat + rewards)
 - T13: Docs + verification updates — DONE
 - Step3 (Theme switch reliability + city normalization) — DONE
 
+## Milestone Status
+- M1: DONE
+- M1.1 (T9~T13): DONE
+
 ## Recent Decisions (M1.1)
 - Boss no longer depends on DebugBossButton; ChallengeBossButton drives combat.
 - ThemeChoice locks card drag until a choice is made.
@@ -108,3 +112,4 @@ T8 (MVP combat + rewards)
 - Theme is switched and spawn uses city_* deck entries.
 - Added city resources: city_mud, city_spirit, city_terrain_complete, city_enemy, city_rules.
 - output_remap is active (theme output mapping such as swamp_enemy -> city_enemy).
+- merge_rule_paths is active in ThemeDef (theme first, Main fallback).

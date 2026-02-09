@@ -76,7 +76,7 @@
 **Risks**
 - Over-engineering early. Mitigation: keep M0 minimal and support M1 only.
 
-### M1 — Vertical Slice (Swamp theme) — complete 100 cards -> Boss -> Victory -> ThemeChoice (T3 DONE, T4 DONE, T5 DONE, T6 DONE, T7 DONE, T8 DONE)
+### M1 — Vertical Slice (Swamp theme) — complete 100 cards -> Boss -> Victory -> ThemeChoice (DONE; T3 DONE, T4 DONE, T5 DONE, T6 DONE, T7 DONE, T8 DONE)
 **Scope**
 - Implement full loop for a single theme (Swamp) with minimal but playable rules.
 **Deliverables**
@@ -130,7 +130,7 @@
 **Risks**
 - Drag UX is fiddly. Mitigation: snapping, clear drop zones, hover preview.
 
-### M1.1 – Swamp VS reinforcement (T9–T13)
+### M1.1 – Swamp VS reinforcement (DONE; T9–T13)
 **Scope**
 - Close remaining loop gaps for boss flow, spirit+terrain main path, drops/growth, and real theme switch.
 **Deliverables**
@@ -240,3 +240,17 @@
 - Deterministic RNG seed toggle
 - Debug HUD: spawned count, boss state, board occupancy, current theme
 - Event log: spawn, place, merge, delete, combat start/end
+
+## Release Note (M1)
+- M1 and M1.1 are complete and validated end-to-end.
+- Core loop is playable: spawn 100 cards -> boss phase -> defeat -> ThemeChoice -> next run.
+- Drag/drop stack is stable with manual CardView motion and CardLayer hit dispatch.
+- Board placement supports occupancy checks, out-of-bounds rejection, and center snap.
+- OverflowArea now contains overflow cards to keep gameplay UI readable.
+- Merge supports both rule-based recipes and spirit+complete-terrain main path.
+- Theme switch uses on_theme_chosen -> reset_run(theme_id) as single reset protocol.
+- reset_run forces multi-source cleanup and shows HUD 0/100 before re-spawn.
+- Theme content is now split: swamp_* and city_* decks/resources are both available.
+- Merge rule loading is theme-scoped via ThemeDef.merge_rule_paths, with Main fallback path.
+- Boss flow is state-machine focused in M1.1: ChallengeBoss enters fight state, DebugDamage reduces HP, ThemeChoice appears at HP<=0.
+- Known limitation: combat pacing/balance and full animated battle ticks are not implemented yet.

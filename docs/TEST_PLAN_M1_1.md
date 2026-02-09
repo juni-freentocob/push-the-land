@@ -254,3 +254,21 @@
 - Theme 文案切换为 City，重生卡主前缀为 `city_`
 - City 合成可生成 `city_enemy`
 - `city_enemy` 进入 HeroPanel 可触发战斗/掉落逻辑
+
+---
+
+## M1 Completion Status
+
+- M1: DONE
+- M1.1 (T9~T13): DONE
+
+## Current Implementation Boundaries
+
+- Boss combat in M1.1 validates state machine closure, not full battle pacing/balance.
+- ChallengeBoss enters BossFight state and does not auto-defeat boss.
+- DebugDamage is the temporary and only HP reduction entry for boss validation.
+- Theme switch must follow on_theme_chosen -> reset_run(theme_id).
+- reset_run must clear cards from Board/OverflowArea/CardLayer and reset occupancy.
+- HUD must show 0/100 before the next spawn batch starts.
+- Theme rules are loaded from ThemeDef.merge_rule_paths first, with Main fallback path.
+- Enemy recognition currently uses `_enemy` suffix; future version should migrate to explicit card kind.
