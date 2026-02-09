@@ -21,3 +21,10 @@ func handle_drop_from_card(card_view: CardView) -> bool:
 	if board.get_global_rect().has_point(mouse_pos) and board.can_accept_drop(card_view):
 		return board.accept_drop(card_view)
 	return false
+
+func reset_drag_state() -> void:
+	var cards := get_tree().get_nodes_in_group("card_view")
+	for node in cards:
+		var card := node as CardView
+		if card != null:
+			card.reset_drag_state()

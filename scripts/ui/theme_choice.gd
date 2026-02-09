@@ -32,4 +32,5 @@ func hide_choices() -> void:
 func _choose_index(index: int) -> void:
 	if index < 0 or index >= _ids.size():
 		return
+	print("[ThemeChoice] Click:", _ids[index])
 	emit_signal("theme_chosen", _ids[index])

@@ -80,6 +80,9 @@ func _remove_card_from_occupancy(card_view: CardView) -> void:
 func remove_card(card_view: CardView) -> void:
 	_remove_card_from_occupancy(card_view)
 
+func clear_occupancy() -> void:
+	occupancy.clear()
+
 func set_merge_rules(rules: Array[MergeRule]) -> void:
 	merge_rules = []
 	for rule in rules:

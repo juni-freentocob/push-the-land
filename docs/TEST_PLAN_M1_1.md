@@ -232,3 +232,25 @@
 - hover 遮挡：高亮层是否置于拖拽卡之下；拖拽卡是否置顶
 - UI 被遮挡：ThemeChoice z_index/CanvasLayer 层级；OverflowArea 是否避开 UI 区域
 - Boss 无法闭环：Boss 战触发仍依赖 Debug；Boss defeated 未自动 show ThemeChoice
+
+---
+
+## Step3 附加验收（Theme 切换一致性）
+
+**前置条件**
+- ThemeChoice 可选 City
+- city_theme.deck_weights 指向 city_* 资源
+- ThemeDef.output_remap 已配置（swamp_enemy -> city_enemy）
+
+**操作步骤**
+1. 完成一局并进入 ThemeChoice，点击 `City`
+2. 观察清场、HUD 和重生
+3. 在 City 局中执行 `city_spirit + city_mud` 与 `city_spirit + city_terrain_complete`
+4. 将 `city_enemy` 拖到 HeroPanel
+
+**预期结果**
+- 点击 City 后旧卡全部消失（Board + OverflowArea + CardLayer）
+- HUD 先显示 `0/100`（至少一帧）再回到 `100/100`
+- Theme 文案切换为 City，重生卡主前缀为 `city_`
+- City 合成可生成 `city_enemy`
+- `city_enemy` 进入 HeroPanel 可触发战斗/掉落逻辑

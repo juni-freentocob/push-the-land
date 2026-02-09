@@ -45,8 +45,7 @@ func _ready() -> void:
 	theme_choice.z_index = 200
 	boss_preview.hide_boss()
 	_set_boss_button_enabled(false)
-	_load_merge_rules()
-	board.set_merge_rules(merge_rules)
+	_refresh_merge_rules_for_theme()
 	board.merge_happened.connect(_on_board_merge_happened)
 	board.spirit_terrain_happened.connect(_on_board_spirit_terrain_happened)
 	theme_choice.theme_chosen.connect(_on_theme_chosen)
@@ -77,16 +76,36 @@ func _setup_seed() -> void:
 	rng.seed = active_seed
 
 func _load_merge_rules() -> void:
-	if not merge_rules.is_empty():
-		return
-	if merge_rules_path.is_empty():
-		push_error("[Main] Merge rules path is empty.")
-		return
-	var res: Resource = load(merge_rules_path)
+	_refresh_merge_rules_for_theme()
+
+func _refresh_merge_rules_for_theme() -> void:
+	var loaded_rules: Array[MergeRule] = []
+	for rule in merge_rules:
+		if rule != null:
+			loaded_rules.append(rule)
+	var used_theme_paths: bool = false
+	if theme != null and not theme.merge_rule_paths.is_empty():
+		for path in theme.merge_rule_paths:
+			_try_append_rule_from_path(loaded_rules, String(path))
+		used_theme_paths = true
+	if not used_theme_paths and not merge_rules_path.is_empty():
+		_try_append_rule_from_path(loaded_rules, merge_rules_path)
+	merge_rules = loaded_rules
+	board.set_merge_rules(merge_rules)
+
+func _try_append_rule_from_path(target: Array[MergeRule], path: String) -> void:
+	var res: Resource = load(path)
 	if res == null:
-		push_error("[Main] Failed to load merge rules: %s" % merge_rules_path)
+		push_warning("[Main] Failed to load merge rule: %s" % path)
 		return
-	merge_rules = [res as MergeRule]
+	var rule: MergeRule = res as MergeRule
+	if rule == null:
+		push_warning("[Main] Invalid merge rule resource: %s" % path)
+		return
+	for existing in target:
+		if existing != null and existing.id == rule.id:
+			return
+	target.append(rule)
 
 func _spawn_initial_cards() -> void:
 	for _i in range(total_spawn):
@@ -198,29 +217,31 @@ func _on_card_drag_ended(_card_view: CardView) -> void:
 	board.clear_hover_source()
 
 func _on_board_merge_happened(_input_a: StringName, _input_b: StringName, output: StringName, cell: Vector2i) -> void:
+	var themed_output: StringName = _resolve_theme_output(output)
 	var card_view := CARD_VIEW_SCENE.instantiate() as CardView
 	card_layer.add_child(card_view)
-	card_view.def_id = output
+	card_view.def_id = themed_output
 	card_view.drag_started.connect(_on_card_drag_started)
 	card_view.drag_ended.connect(_on_card_drag_ended)
 	card_view.hover_started.connect(_on_card_hover_started)
 	card_view.hover_ended.connect(_on_card_hover_ended)
 	var label := card_view.get_node_or_null("Label") as Label
 	if label != null:
-		label.text = _get_card_display_name(output)
+		label.text = _get_card_display_name(themed_output)
 	board.place_card_at_cell(card_view, cell)
 
 func _on_board_spirit_terrain_happened(_spirit_id: StringName, _terrain_id: StringName, output: StringName, cell: Vector2i) -> void:
+	var themed_output: StringName = _resolve_theme_output(output)
 	var card_view := CARD_VIEW_SCENE.instantiate() as CardView
 	card_layer.add_child(card_view)
-	card_view.def_id = output
+	card_view.def_id = themed_output
 	card_view.drag_started.connect(_on_card_drag_started)
 	card_view.drag_ended.connect(_on_card_drag_ended)
 	card_view.hover_started.connect(_on_card_hover_started)
 	card_view.hover_ended.connect(_on_card_hover_ended)
 	var label := card_view.get_node_or_null("Label") as Label
 	if label != null:
-		label.text = _get_card_display_name(output)
+		label.text = _get_card_display_name(themed_output)
 	board.place_card_at_cell(card_view, cell)
 
 func _get_card_display_name(card_id: StringName) -> String:
@@ -241,7 +262,7 @@ func _on_theme_chosen(theme_id: StringName) -> void:
 	_set_card_interaction_enabled(true)
 	if boss_defeated:
 		boss_preview.hide_boss()
-	_apply_theme_by_id(theme_id)
+	await reset_run(theme_id)
 
 func _set_card_interaction_enabled(enabled: bool) -> void:
 	var cards := get_tree().get_nodes_in_group("card_view")
@@ -309,7 +330,7 @@ func _on_equip_requested(card_view: CardView) -> void:
 	_consume_card(card_view)
 
 func _on_combat_requested(card_view: CardView) -> void:
-	if card_view.def_id != &"swamp_enemy":
+	if not _is_combat_enemy(card_view.def_id):
 		return
 	var enemy_hp: int = 3
 	var enemy_atk: int = 1
@@ -399,22 +420,19 @@ func _load_theme_def(theme_id: StringName) -> ThemeDef:
 	var res := load(path)
 	return res as ThemeDef
 
-func _apply_theme_by_id(theme_id: StringName) -> void:
+func reset_run(theme_id: StringName) -> void:
+	print("[Main] reset_run begin:", theme_id)
 	var new_theme := _load_theme_def(theme_id)
 	if new_theme == null:
 		push_error("[Main] Theme not found: %s" % String(theme_id))
 		return
 	theme = new_theme
-	_reset_run()
-
-func _reset_run() -> void:
-	var cards := get_tree().get_nodes_in_group("card_view")
-	for node in cards:
-		var card := node as CardView
-		if card != null:
-			card.queue_free()
+	_refresh_merge_rules_for_theme()
+	_clear_all_cards()
 	board.clear_highlights()
-	board.occupancy.clear()
+	board.clear_occupancy()
+	if card_layer != null:
+		card_layer.reset_drag_state()
 	spawned_count = 0
 	drop_count = 0
 	boss_spawned = false
@@ -423,4 +441,44 @@ func _reset_run() -> void:
 	boss_fight_active = false
 	_setup_seed()
 	_update_debug_hud()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await get_tree().create_timer(0.05).timeout
 	_spawn_initial_cards()
+	print("[Main] reset_run end:", theme_id)
+
+func _reset_run() -> void:
+	await reset_run(theme.id if theme != null else &"")
+
+func _resolve_theme_output(base_output: StringName) -> StringName:
+	if theme == null:
+		return base_output
+	var key := String(base_output)
+	if theme.output_remap.has(key):
+		return StringName(theme.output_remap[key])
+	return base_output
+
+func _is_combat_enemy(card_id: StringName) -> bool:
+	return card_id == _resolve_theme_output(&"swamp_enemy")
+
+func _clear_all_cards() -> void:
+	var cards := get_tree().get_nodes_in_group("card_view")
+	for node in cards:
+		var card := node as CardView
+		if card != null:
+			card.queue_free()
+	if card_layer != null:
+		for child in card_layer.get_children():
+			var layer_card := child as CardView
+			if layer_card != null:
+				layer_card.queue_free()
+	if overflow_area != null:
+		for child in overflow_area.get_children():
+			var overflow_card := child as CardView
+			if overflow_card != null:
+				overflow_card.queue_free()
+	if board != null and board.occupancy_layer != null:
+		for child in board.occupancy_layer.get_children():
+			var board_card := child as CardView
+			if board_card != null:
+				board_card.queue_free()

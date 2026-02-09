@@ -84,6 +84,7 @@ T8 (MVP combat + rewards)
 - T11: Drop + growth loop to make boss winnable — DONE
 - T12: ThemeChoice leads to a real new round — DONE
 - T13: Docs + verification updates — DONE
+- Step3 (Theme switch reliability + city normalization) — DONE
 
 ## Recent Decisions (M1.1)
 - Boss no longer depends on DebugBossButton; ChallengeBossButton drives combat.
@@ -91,6 +92,8 @@ T8 (MVP combat + rewards)
 - Main path (spirit + complete terrain) is enabled; MergeRule spirit+mud stays for now.
 - Drops go to OverflowArea by default to avoid board crowding.
 - Theme switch clears board, resets counts, and re-spawns; city_theme added as placeholder.
+- reset_run is the only theme-switch reset entrypoint and must show HUD 0/100 before re-spawn.
+- Theme rules are containerized by ThemeDef.merge_rule_paths (Main path is fallback).
 
 ## Verification Checklist (Current)
 - Drag card to HeroPanel: prints accept_drop log
@@ -98,3 +101,10 @@ T8 (MVP combat + rewards)
 - Drag card to Board: snaps to grid center
 - Drag card to occupied cell: rejected and returns to original
 - GridVisual visible: border, grid lines, hover cell
+
+## Step3 Snapshot
+- ThemeChoice -> City now clears old cards from Board + OverflowArea + CardLayer reliably.
+- HUD shows 0/100 before next-round spawn.
+- Theme is switched and spawn uses city_* deck entries.
+- Added city resources: city_mud, city_spirit, city_terrain_complete, city_enemy, city_rules.
+- output_remap is active (theme output mapping such as swamp_enemy -> city_enemy).

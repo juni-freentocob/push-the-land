@@ -26,7 +26,7 @@ func _ready() -> void:
 	_update_labels()
 
 func accept_drop(card_view: CardView) -> void:
-	if card_view.def_id == &"swamp_enemy":
+	if _is_enemy_card(card_view.def_id):
 		combat_requested.emit(card_view)
 	else:
 		equip_requested.emit(card_view)
@@ -59,3 +59,6 @@ func _update_labels() -> void:
 	atk_label.text = "ATK: %d" % atk
 	def_label.text = "DEF: %d" % defense
 	xp_label.text = "XP: %d" % xp
+
+func _is_enemy_card(card_id: StringName) -> bool:
+	return String(card_id).ends_with("_enemy")

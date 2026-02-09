@@ -82,8 +82,10 @@ Fields:
 - id: StringName
 - display_name: String
 - deck: Array[StringName] (list of CardDef ids; for MVP we can generate 100 from weights)
-- deck_weights: Dictionary[StringName, int] (card_id -> weight)
+- deck_weights: Dictionary[StringName, int] (card_id -> weight; keys must match card resource ids for that theme)
 - boss_id: StringName (BossDef or EnemyDef id)
+- output_remap: Dictionary[StringName, StringName] (theme-specific output mapping, e.g. swamp_enemy -> city_enemy)
+- merge_rule_paths: PackedStringArray (theme-specific MergeRule resource paths)
 - visuals: Dictionary (background, card_frame, tint) (optional early)
 - next_theme_pool: Array[StringName] (optional; controls what appears in 3 boxes)
 Notes:
@@ -91,6 +93,9 @@ Notes:
 ThemeChoice mapping:
 - Buttons return theme_id (no hardcoded ids)
 - Theme selection priority: next_theme_pool (if non-empty) else theme_pool (fallback)
+MergeRule loading priority:
+- ThemeDef.merge_rule_paths first
+- Fallback to Main.merge_rules_path only when theme does not provide paths
 
 ## 7.1) Theme pool (runtime)
 Fields:
@@ -103,6 +108,9 @@ CardInstance:
 - def_id: StringName
 - instance_id: int
 - state (e.g., placed coords, durability) if needed
+Enemy recognition (current runtime rule):
+- `String(def_id).ends_with("_enemy")`
+- Future recommendation: switch to explicit CardDef kind/enemy flag for stronger typing
 
 ## 9) Drop Pool (MVP runtime config)
 Fixed list used for enemy drops (not a Resource yet).

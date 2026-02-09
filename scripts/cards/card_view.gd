@@ -70,6 +70,12 @@ func _mouse_exited() -> void:
 		return
 	hover_ended.emit(self)
 
+func reset_drag_state() -> void:
+	_dragging = false
+	z_index = _prev_z_index
+	z_as_relative = _prev_z_relative
+	set_as_top_level(_prev_top_level)
+
 func set_highlighted(enabled: bool) -> void:
 	if highlight != null:
 		highlight.visible = enabled

@@ -160,6 +160,12 @@
 - Theme source: theme.next_theme_pool (preferred) or default theme_pool fallback
 - Added city_theme placeholder for switching validation
 - DebugHUD shows 0/100 on reset before spawning begins
+- on_theme_chosen -> reset_run(theme_id) is the single reset entrypoint
+- reset_run order is fixed: spawned_count=0 + HUD refresh -> await frame(s) -> spawn
+- reset_run uses _clear_all_cards() across group/CardLayer/OverflowArea/Board OccupancyLayer to avoid leaked cards
+- Theme data must be self-consistent (city_theme deck_weights must point to city_* cards, not swamp_*)
+- Enemy recognition is generic (suffix `_enemy`), not hardcoded `swamp_enemy`
+- MergeRule source is theme-scoped: ThemeDef.merge_rule_paths first, fallback to Main.merge_rules_path
 **T13 Completion**
 - M1.1 decisions, schema, and scene tree notes updated
 - Test plan maintained as docs/TEST_PLAN_M1_1.md
@@ -226,6 +232,9 @@
 - 2026-02-03: ThemeChoice selection resets run state and restarts spawning; next_theme_pool preferred, else Main.theme_pool fallback.
 - 2026-02-03: Tested delayed spawn hook for ChallengeBoss validation; removed afterward, but may reintroduce for future spawn pacing/animation.
 - 2026-02-03: Boss combat is non-simulated in M1.1: ChallengeBoss enters fight state, DebugDamage is the only HP reducer, and ThemeChoice triggers only when HP<=0.
+- 2026-02-03: Theme switch stability: on_theme_chosen -> reset_run(theme_id) only; reset_run performs forced multi-source cleanup and HUD 0/100-before-spawn sequencing.
+- 2026-02-03: City theme normalization: city_theme deck and outputs use city_* resources; `swamp_*` references are disallowed in city deck_weights.
+- 2026-02-03: MergeRule loading is theme-containerized via ThemeDef.merge_rule_paths; default path in Main is fallback only.
 
 ## 6. Debug/Test strategy
 - Deterministic RNG seed toggle

@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="CardDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_def.gd" id="1_carddef"]
+
+[resource]
+script = ExtResource("1_carddef")
+id = &"city_spirit"
+display_name = "city_spirit"
+kind = 1
+theme_tags = PackedStringArray("city")

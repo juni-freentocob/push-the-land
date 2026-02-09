@@ -7,10 +7,14 @@ script = ExtResource("1_7u74b")
 id = &"city"
 display_name = "City"
 deck_weights = {
-"swamp_mud": 30,
-"swamp_spirit": 50,
-"swamp_terrain_complete": 10,
+"city_mud": 30,
+"city_spirit": 50,
+"city_terrain_complete": 10,
 "wood_spear": 20
 }
 boss_id = &"city_boss"
+output_remap = {
+"swamp_enemy": "city_enemy"
+}
+merge_rule_paths = PackedStringArray("res://data/merge/city_rules.tres")
 metadata/_custom_type_script = "uid://dqwmvf0u14jkh"
